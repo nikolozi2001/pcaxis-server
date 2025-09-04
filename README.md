@@ -2,6 +2,21 @@
 
 A modern Node.js API server for accessing Georgian statistical data from the PXWeb database. This server provides a clean REST API interface to access and process statistical datasets from both demographic and environmental categories.
 
+## 🆕 Latest Updates
+
+### Air Pollution Data Integration ✨
+- **Real Air Pollution Datasets** - Added 4 authentic air pollution datasets from Georgian National Statistics
+- **Regional Coverage** - Air pollution data by Georgian regions and cities
+- **Transport Emissions** - Vehicle emission data by pollutant type
+- **Stationary Sources** - Industrial pollution data by category
+- **Georgian Language Support** - All dataset descriptions in Georgian
+
+### New Air Pollution Endpoints 🌬️
+- `air-pollution-regions` - ატმოსფერული ჰაერის დაბინძურება
+- `air-pollution-cities` - ცალკეულ ქალაქებში მავნე ნივთიერებები
+- `transport-emissions` - ავტოტრანსპორტის ემისიები
+- `stationary-source-pollution` - სტაციონარული წყაროებიდან დაბინძურება
+
 ## 🚀 Features
 
 - **RESTful API** - Clean, well-structured endpoints
@@ -44,6 +59,7 @@ pcaxis-server/
 │   └── app.js            # Express application setup
 ├── index.js              # Server entry point
 ├── test-env-datasets.js  # Test script for environmental datasets
+├── test-air-pollution.js # Test script for air pollution datasets
 ├── package.json
 └── README.md
 ```
@@ -138,8 +154,14 @@ pcaxis-server/
 - `life-expectancy` - Life expectancy at birth
 
 ### Environmental Datasets
-- `air-pollution-tbilisi` - Air pollution in Tbilisi
-- `emissions-by-source` - Air pollutant emissions by source
+
+#### 🌬️ Air Pollution (ატმოსფერული ჰაერის დაბინძურება)
+- `air-pollution-regions` - Air pollution by regions across Georgia
+- `air-pollution-cities` - Harmful substances in cities from stationary sources (thousand tons)
+- `transport-emissions` - Harmful substances emitted by vehicles by type (thousand tons)
+- `stationary-source-pollution` - Harmful substances from stationary sources by category (thousand tons)
+
+#### 🗑️ Waste Management & Other Environmental Data
 - `municipal-waste` - Municipal waste statistics
 - `waste-recycling` - Waste recycling data
 - `forest-area` - Forest area coverage
@@ -167,10 +189,16 @@ curl "http://localhost:3000/api/datasets?category=environment"
 curl "http://localhost:3000/api/datasets?category=demography"
 
 # Get specific dataset data (chart-ready)
-curl http://localhost:3000/api/datasets/municipal-waste/data
+curl http://localhost:3000/api/datasets/air-pollution-regions/data
+
+# Get air pollution by cities data
+curl http://localhost:3000/api/datasets/air-pollution-cities/data
+
+# Get transport emissions data
+curl http://localhost:3000/api/datasets/transport-emissions/data
 
 # From another PC on the network
-curl http://192.168.1.27:3000/api/datasets/air-pollution-tbilisi/data
+curl http://192.168.1.27:3000/api/datasets/stationary-source-pollution/data
 ```
 
 ### Navigation & Discovery
@@ -255,6 +283,9 @@ The server can be configured via environment variables:
 ```bash
 # Run the environmental datasets test
 node test-env-datasets.js
+
+# Test air pollution datasets specifically
+node test-air-pollution.js
 ```
 
 ### Adding New Datasets

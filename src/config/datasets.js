@@ -41,19 +41,37 @@ export const DATASETS = {
 
   // Environmental Statistics Datasets
   // Air Pollution
-  'air-pollution-tbilisi': {
-    id: 'air-pollution-tbilisi',
-    name: 'Air Pollution in Tbilisi',
-    description: 'Air quality indicators and pollution levels in Tbilisi',
-    path: 'Environment%20Statistics/Air%20Pollution/01_Air_Pollution_Tbilisi.px',
-    category: 'environment'
+  'air-pollution-regions': {
+    id: 'air-pollution-regions',
+    name: 'Air Pollution by Regions',
+    description: 'ატმოსფერული ჰაერის დაბინძურება',
+    path: 'Environment%20Statistics/Air%20Pollution/1.Air_Pollution_by_regios.px',
+    category: 'environment',
+    subcategory: 'air-pollution'
   },
-  'emissions-by-source': {
-    id: 'emissions-by-source',
-    name: 'Emissions by Source',
-    description: 'Air pollutant emissions by source category',
-    path: 'Environment%20Statistics/Air%20Pollution/02_Emissions_by_Source.px',
-    category: 'environment'
+  'air-pollution-cities': {
+    id: 'air-pollution-cities',
+    name: 'Air Pollution by Cities',
+    description: 'ცალკეულ ქალაქებში სტაციონარულ წყაროებში წარმოქმნილი, დაჭერილი და გაფრქვეული მავნე ნივთიერებები (ათასი ტონა)',
+    path: 'Environment%20Statistics/Air%20Pollution/2.Air_pollution_by-cities.px',
+    category: 'environment',
+    subcategory: 'air-pollution'
+  },
+  'transport-emissions': {
+    id: 'transport-emissions',
+    name: 'Transport Emissions',
+    description: 'ავტოტრანსპორტის მიერ ატმოსფეროში გაფრქვეული მავნე ნივთიერებები სახეობების მიხედვით (ათასი ტონა)',
+    path: 'Environment%20Statistics/Air%20Pollution/3.Emission_from_transport.px',
+    category: 'environment',
+    subcategory: 'air-pollution'
+  },
+  'stationary-source-pollution': {
+    id: 'stationary-source-pollution',
+    name: 'Stationary Source Pollution',
+    description: 'სტაციონარულ წყაროებში წარმოქმნილი მავნე ნივთიერებების დაჭერა და ატმოსფეროში გაფრქვევა კატეგორიების მიხედვით (ათასი ტონა)',
+    path: 'Environment%20Statistics/Air%20Pollution/4.Air_pollution_by_category.px',
+    category: 'environment',
+    subcategory: 'air-pollution'
   },
 
   // Waste Management
