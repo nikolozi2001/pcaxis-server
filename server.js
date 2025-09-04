@@ -205,13 +205,15 @@ app.get('/health', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 PXWeb Backend Server running on port ${PORT}`);
+  console.log(`📊 Server accessible on all network interfaces (0.0.0.0:${PORT})`);
   console.log(`📊 Available endpoints:`);
   console.log(`   GET  /api/datasets           - List available datasets`);
   console.log(`   GET  /api/datasets/:id/metadata - Get dataset metadata`);
   console.log(`   GET  /api/datasets/:id/data     - Get processed chart data`);
   console.log(`   GET  /api/datasets/:id/jsonstat - Get raw JSON-Stat data`);
   console.log(`   GET  /health                    - Health check`);
-  console.log(`\n📝 Example: http://localhost:${PORT}/api/datasets/divorced-people-age/data`);
+  console.log(`\n📝 Local: http://localhost:${PORT}/api/datasets/divorced-people-age/data`);
+  console.log(`📝 Network: http://192.168.1.27:${PORT}/api/datasets/divorced-people-age/data`);
 });
