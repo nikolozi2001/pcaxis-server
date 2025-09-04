@@ -14,17 +14,35 @@ export class DatasetController {
    */
   async getDatasets(req, res) {
     try {
-      const datasets = Object.values(DATASETS).map(dataset => ({
+      const { category } = req.query;
+      
+      let datasets = Object.values(DATASETS).map(dataset => ({
         id: dataset.id,
         name: dataset.name,
         description: dataset.description,
         category: dataset.category
       }));
 
+      // Filter by category if specified
+      if (category) {
+        datasets = datasets.filter(dataset => dataset.category === category);
+      }
+
+      // Group by category
+      const groupedByCategory = datasets.reduce((acc, dataset) => {
+        if (!acc[dataset.category]) {
+          acc[dataset.category] = [];
+        }
+        acc[dataset.category].push(dataset);
+        return acc;
+      }, {});
+
       res.json({
         success: true,
         count: datasets.length,
-        data: datasets
+        data: datasets,
+        grouped: groupedByCategory,
+        categories: Object.keys(groupedByCategory)
       });
     } catch (error) {
       res.status(500).json({
