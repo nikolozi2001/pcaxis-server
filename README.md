@@ -1,16 +1,19 @@
 # PXWeb API Server
 
-A modern Node.js API server for accessing Georgian statistical data from the PXWeb database. This server provides a clean REST API interface to access and process statistical datasets.
+A modern Node.js API server for accessing Georgian statistical data from the PXWeb database. This server provides a clean REST API interface to access and process statistical datasets from both demographic and environmental categories.
 
 ## 🚀 Features
 
 - **RESTful API** - Clean, well-structured endpoints
+- **Multiple Data Categories** - Demographics and Environmental statistics
 - **Data Processing** - Automatic data transformation for charts and visualizations
+- **API Navigation** - Dynamic exploration of PXWeb database structure
 - **Error Handling** - Comprehensive error handling and logging
 - **CORS Support** - Cross-origin resource sharing enabled
 - **Health Monitoring** - Health check and system status endpoints
 - **Network Access** - Accessible from local network (other PCs)
 - **Modern Architecture** - Modular, maintainable code structure
+- **Georgian Language Support** - Category names in Georgian
 
 ## 📁 Project Structure
 
@@ -22,14 +25,17 @@ pcaxis-server/
 │   │   └── datasets.js   # Dataset definitions
 │   ├── controllers/      # Request handlers
 │   │   ├── datasetController.js
-│   │   └── healthController.js
+│   │   ├── healthController.js
+│   │   └── navigationController.js
 │   ├── services/         # Business logic
 │   │   ├── pxwebService.js
-│   │   └── dataProcessingService.js
+│   │   ├── dataProcessingService.js
+│   │   └── pxwebNavigationService.js
 │   ├── routes/           # Route definitions
 │   │   ├── index.js
 │   │   ├── datasets.js
-│   │   └── health.js
+│   │   ├── health.js
+│   │   └── navigation.js
 │   ├── middleware/       # Custom middleware
 │   │   ├── errorHandler.js
 │   │   └── requestLogger.js
@@ -37,6 +43,7 @@ pcaxis-server/
 │   │   └── helpers.js
 │   └── app.js            # Express application setup
 ├── index.js              # Server entry point
+├── test-env-datasets.js  # Test script for environmental datasets
 ├── package.json
 └── README.md
 ```
@@ -76,60 +83,137 @@ pcaxis-server/
 - **Local:** `http://localhost:3000`
 - **Network:** `http://192.168.1.27:3000` (accessible from other PCs)
 
-### Endpoints
+### Core Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/` | API information |
-| `GET` | `/api` | API documentation |
-| `GET` | `/api/datasets` | List all available datasets |
-| `GET` | `/api/datasets/:id/metadata` | Get dataset metadata |
-| `GET` | `/api/datasets/:id/data` | Get processed chart-ready data |
-| `GET` | `/api/datasets/:id/jsonstat` | Get raw JSON-Stat data |
+| `GET` | `/` | API information and documentation |
+| `GET` | `/api` | Detailed API documentation |
 | `GET` | `/health` | Simple health check |
 | `GET` | `/health/status` | Detailed system status |
 
-### Available Datasets
+### Dataset Endpoints
 
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/datasets` | List all available datasets |
+| `GET` | `/api/datasets?category=environment` | Filter datasets by category |
+| `GET` | `/api/datasets/:id/metadata` | Get dataset metadata |
+| `GET` | `/api/datasets/:id/data` | Get processed chart-ready data |
+| `GET` | `/api/datasets/:id/jsonstat` | Get raw JSON-Stat data |
+
+### Navigation & Discovery Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/navigation/categories` | Get all categories and subcategories |
+| `GET` | `/api/navigation/environment` | Get environmental statistics structure |
+| `GET` | `/api/navigation/explore?path=...` | Explore PXWeb API structure |
+| `GET` | `/api/navigation/discover?path=...&maxDepth=2` | Discover tables in path |
+
+## 📊 Available Data Categories
+
+### 👥 Demographics (demography)
+- **Population statistics**
+- **Age demographics** 
+- **Life expectancy data**
+- **Birth and marriage statistics**
+
+### 🌱 Environmental Statistics (environment)
+- **🌬️ Air Pollution** (ატმოსფერული ჰაერის დაბინძურება)
+- **💰 Environmental-Economic Accounts** (გარემოსდაცვითი ეკონომიკური ანგარიშები)
+- **📈 Environmental Indicators** (გარემოსდაცვითი ინდიკატორები)
+- **🏞️ Protected Areas** (დაცული ტერიტორიები)
+- **🗑️ Waste Management** (ნარჩენები)
+- **⚠️ Natural Hazards & Violations** (სტიქიური მოვლენები და სამართალდარღვევები)
+- **🌲 Forest Resources** (ტყის რესურსები)
+
+## 🔍 Available Datasets
+
+### Demographic Datasets
 - `divorced-people-age` - Mean age of divorced people
 - `population` - Population of Georgia
 - `mean-age` - Mean age of population
 - `live-births-age` - Live births by age of mother
 - `life-expectancy` - Life expectancy at birth
 
-### Example Requests
+### Environmental Datasets
+- `air-pollution-tbilisi` - Air pollution in Tbilisi
+- `emissions-by-source` - Air pollutant emissions by source
+- `municipal-waste` - Municipal waste statistics
+- `waste-recycling` - Waste recycling data
+- `forest-area` - Forest area coverage
+- `forest-production` - Forest production statistics
+- `protected-areas` - Protected areas statistics
+- `biodiversity-indicators` - Biodiversity indicators
+- `environmental-indicators` - Key environmental indicators
+- `climate-indicators` - Climate change indicators
+- `natural-disasters` - Natural disaster statistics
+- `environmental-violations` - Environmental law violations
+- `environmental-expenditure` - Environmental expenditure
+- `green-economy` - Green economy indicators
 
+## 📝 Example Requests
+
+### Basic Dataset Operations
 ```bash
 # Get all datasets
 curl http://localhost:3000/api/datasets
 
-# Get divorced people age data (chart-ready)
-curl http://localhost:3000/api/datasets/divorced-people-age/data
+# Get environmental datasets only
+curl "http://localhost:3000/api/datasets?category=environment"
+
+# Get demographic datasets only
+curl "http://localhost:3000/api/datasets?category=demography"
+
+# Get specific dataset data (chart-ready)
+curl http://localhost:3000/api/datasets/municipal-waste/data
 
 # From another PC on the network
-curl http://192.168.1.27:3000/api/datasets/divorced-people-age/data
+curl http://192.168.1.27:3000/api/datasets/air-pollution-tbilisi/data
+```
 
-# Get metadata
-curl http://localhost:3000/api/datasets/divorced-people-age/metadata
+### Navigation & Discovery
+```bash
+# Get all categories
+curl http://localhost:3000/api/navigation/categories
 
-# Health check
+# Get environmental structure
+curl http://localhost:3000/api/navigation/environment
+
+# Explore PXWeb API structure
+curl "http://localhost:3000/api/navigation/explore?path=Environment%20Statistics"
+
+# Discover tables in a path
+curl "http://localhost:3000/api/navigation/discover?path=Environment%20Statistics/Air%20Pollution&maxDepth=2"
+```
+
+### Health & Status
+```bash
+# Simple health check
 curl http://localhost:3000/health
+
+# Detailed system status
+curl http://localhost:3000/health/status
 ```
 
 ## 📊 Response Format
 
 All API responses follow a consistent format:
 
+### Success Response
 ```json
 {
   "success": true,
   "data": {
     // Response data here
-  }
+  },
+  "count": 15,  // For list endpoints
+  "categories": ["demography", "environment"]  // For dataset lists
 }
 ```
 
-Error responses:
+### Error Response
 ```json
 {
   "success": false,
@@ -138,7 +222,21 @@ Error responses:
 }
 ```
 
-## � Configuration
+### Dataset List Response (with Grouping)
+```json
+{
+  "success": true,
+  "count": 19,
+  "data": [...],
+  "grouped": {
+    "demography": [...],
+    "environment": [...]
+  },
+  "categories": ["demography", "environment"]
+}
+```
+
+## 🔧 Configuration
 
 The server can be configured via environment variables:
 
@@ -153,10 +251,17 @@ The server can be configured via environment variables:
 
 ## 🚀 Development
 
+### Testing Environmental Features
+```bash
+# Run the environmental datasets test
+node test-env-datasets.js
+```
+
 ### Adding New Datasets
 
-1. Add dataset configuration to `src/config/datasets.js`
-2. The dataset will automatically be available through the API
+1. **Manual Addition:** Add dataset configuration to `src/config/datasets.js`
+2. **Dynamic Discovery:** Use navigation endpoints to discover new tables
+3. **Automatic:** The dataset will be available through the API
 
 ### Project Scripts
 
@@ -166,13 +271,36 @@ npm run dev     # Start development server with auto-restart
 npm test        # Run tests (to be implemented)
 ```
 
+## 🔍 API Discovery Workflow
+
+1. **Explore Categories:**
+   ```bash
+   curl http://localhost:3000/api/navigation/categories
+   ```
+
+2. **Explore Environment Structure:**
+   ```bash
+   curl http://localhost:3000/api/navigation/environment
+   ```
+
+3. **Discover Tables:**
+   ```bash
+   curl "http://localhost:3000/api/navigation/discover?path=Environment%20Statistics/Waste"
+   ```
+
+4. **Access Discovered Data:**
+   ```bash
+   curl http://localhost:3000/api/datasets/{discovered-dataset-id}/data
+   ```
+
 ## 🔒 Security Features
 
-- **CORS** protection
+- **CORS** protection with configurable origins
 - **Security headers** (XSS, CSRF protection)
 - **Request logging** and monitoring
 - **Error handling** without sensitive data exposure
 - **Timeout protection** for external API calls
+- **Input validation** and sanitization
 
 ## 🌍 Network Access
 
@@ -183,12 +311,20 @@ The server is configured to accept connections from:
 
 **Firewall Note:** Ensure Windows Firewall allows Node.js connections on port 3000.
 
-## 📈 Monitoring
+## 📈 Monitoring & Logging
 
-- **Health Check:** `GET /health` - Simple status check
-- **System Status:** `GET /health/status` - Detailed system information
-- **Request Logging:** All requests are logged with timing information
-- **Error Tracking:** Comprehensive error logging
+- **Request Logging:** All requests logged with timing and status
+- **Error Tracking:** Comprehensive error logging with stack traces
+- **Health Monitoring:** 
+  - Simple health check at `/health`
+  - Detailed system status at `/health/status`
+- **Performance Metrics:** Memory usage, uptime, response times
+
+## 🌐 Multi-language Support
+
+- **English** - Primary interface language
+- **Georgian (ქართული)** - Category names and descriptions
+- **Automatic Detection** - Language detection from request headers (future)
 
 ## 🤝 Contributing
 
@@ -204,61 +340,13 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 📞 Support
 
-For support or questions, please open an issue on GitHub.
-GET /health
-```
+For support or questions:
+- **GitHub Issues:** [Open an issue](https://github.com/nikolozi2001/pcaxis-server/issues)
+- **API Documentation:** Available at `http://localhost:3000/api`
+- **Test Scripts:** Use `node test-env-datasets.js` for testing
 
-## Available Datasets
+## 🔗 Related Resources
 
-- `divorced-people-age` - Average age of divorced people by gender
-- `population` - Population of Georgia
-- `mean-age` - Mean age of population
-- `live-births-age` - Live births by age of mother
-- `life-expectancy` - Life expectancy at birth
-
-## Example Usage
-
-```bash
-# Get list of datasets
-curl http://localhost:3000/api/datasets
-
-# Get divorced people age data
-curl http://localhost:3000/api/datasets/divorced-people-age/data
-
-# Get population metadata
-curl http://localhost:3000/api/datasets/population/metadata
-```
-
-## Response Format
-
-Chart-ready data format:
-```json
-{
-  "title": "განქორწინებულთა საშუალო ასაკი (წელი)",
-  "dimensions": ["Year", "Gender"],
-  "categories": ["ქალი", "კაცი"],
-  "data": [
-    { "year": 1990, "ქალი": 32.1, "კაცი": 35.4 },
-    { "year": 1995, "ქალი": 31.8, "კაცი": 35.1 },
-    ...
-  ]
-}
-```
-
-## Tech Stack
-
-- **Runtime:** Node.js with ES modules
-- **Framework:** Express.js
-- **Data Processing:** JSON-Stat toolkit
-- **CORS:** Enabled for all origins+ Vite
-
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- **Georgian National Statistics Office:** [geostat.ge](https://www.geostat.ge)
+- **PXWeb Documentation:** [Official PXWeb docs](https://www.scb.se/en/services/statistical-programs-for-px-files/px-web/)
+- **JSON-Stat Toolkit:** [jsonstat.org](https://json-stat.org/)
