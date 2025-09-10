@@ -12,13 +12,10 @@ app.use(express.json());
 // PXWeb API base URL
 const PXWEB_BASE_URL = 'https://pc-axis.geostat.ge/PXWeb/api/v1/ka/Database';
 
-// Available datasets
+// Available datasets (Environmental Statistics only)
 const DATASETS = {
-  'divorced-people-age': 'Gender%20Statistics/Demography/21_Mean_Age_of_Divorced_People.px',
-  'population': 'Gender%20Statistics/Demography/01_Population_of_Georgia.px',
-  'mean-age': 'Gender%20Statistics/Demography/02_Mean_Age_of_Population.px',
-  'live-births-age': 'Gender%20Statistics/Demography/06_Live_Births_by_Age_of_Mother.px',
-  'life-expectancy': 'Gender%20Statistics/Demography/16_Life_Expectancy_at_Birth.px'
+  // Air Pollution datasets will be loaded from the main config
+  // This file appears to be a backup/alternative server
 };
 
 // Helper function to fetch from PXWeb API
@@ -214,6 +211,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   GET  /api/datasets/:id/data     - Get processed chart data`);
   console.log(`   GET  /api/datasets/:id/jsonstat - Get raw JSON-Stat data`);
   console.log(`   GET  /health                    - Health check`);
-  console.log(`\n📝 Local: http://localhost:${PORT}/api/datasets/divorced-people-age/data`);
-  console.log(`📝 Network: http://192.168.1.27:${PORT}/api/datasets/divorced-people-age/data`);
+  console.log(`\n📝 Local: http://localhost:${PORT}/api/datasets/air-pollution-regions/data`);
+  console.log(`📝 Network: http://192.168.1.27:${PORT}/api/datasets/air-pollution-regions/data`);
 });

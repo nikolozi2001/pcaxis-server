@@ -45,7 +45,6 @@ router.get('/', (req, res) => {
       }
     },
     categories: {
-      demography: 'Population and demographic statistics',
       environment: 'Environmental and ecological statistics'
     }
   });

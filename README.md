@@ -129,12 +129,6 @@ pcaxis-server/
 
 ## 📊 Available Data Categories
 
-### 👥 Demographics (demography)
-- **Population statistics**
-- **Age demographics** 
-- **Life expectancy data**
-- **Birth and marriage statistics**
-
 ### 🌱 Environmental Statistics (environment)
 - **🌬️ Air Pollution** (ატმოსფერული ჰაერის დაბინძურება)
 - **💰 Environmental-Economic Accounts** (გარემოსდაცვითი ეკონომიკური ანგარიშები)
@@ -145,13 +139,6 @@ pcaxis-server/
 - **🌲 Forest Resources** (ტყის რესურსები)
 
 ## 🔍 Available Datasets
-
-### Demographic Datasets
-- `divorced-people-age` - Mean age of divorced people
-- `population` - Population of Georgia
-- `mean-age` - Mean age of population
-- `live-births-age` - Live births by age of mother
-- `life-expectancy` - Life expectancy at birth
 
 ### Environmental Datasets
 
@@ -185,8 +172,8 @@ curl http://localhost:3000/api/datasets
 # Get environmental datasets only
 curl "http://localhost:3000/api/datasets?category=environment"
 
-# Get demographic datasets only
-curl "http://localhost:3000/api/datasets?category=demography"
+# Get environmental datasets only
+curl "http://localhost:3000/api/datasets?category=environment"
 
 # Get specific dataset data (chart-ready)
 curl http://localhost:3000/api/datasets/air-pollution-regions/data
@@ -237,7 +224,7 @@ All API responses follow a consistent format:
     // Response data here
   },
   "count": 15,  // For list endpoints
-  "categories": ["demography", "environment"]  // For dataset lists
+  "categories": ["environment"]  // For dataset lists
 }
 ```
 
@@ -257,10 +244,9 @@ All API responses follow a consistent format:
   "count": 19,
   "data": [...],
   "grouped": {
-    "demography": [...],
     "environment": [...]
   },
-  "categories": ["demography", "environment"]
+  "categories": ["environment"]
 }
 ```
 

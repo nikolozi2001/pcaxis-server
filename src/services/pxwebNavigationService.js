@@ -113,13 +113,10 @@ export class PXWebNavigationService {
     const mainCategory = parts[0]?.toLowerCase().replace(/[^a-z]/g, '');
     
     const categoryMap = {
-      'environmentstatistics': 'environment',
-      'genderstatistics': 'demography',
-      'economicstatistics': 'economy',
-      'socialstatistics': 'social'
+      'environmentstatistics': 'environment'
     };
     
-    return categoryMap[mainCategory] || mainCategory || 'general';
+    return categoryMap[mainCategory] || 'environment';
   }
 
   /**

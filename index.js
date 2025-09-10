@@ -28,8 +28,8 @@ const server = app.listen(config.server.port, config.server.host, () => {
   console.log('=' .repeat(50));
   console.log('📝 Example URLs:');
   console.log(`   http://localhost:${config.server.port}/api/datasets`);
-  console.log(`   http://localhost:${config.server.port}/api/datasets/divorced-people-age/data`);
-  console.log(`   http://192.168.1.27:${config.server.port}/api/datasets/divorced-people-age/data`);
+  console.log(`   http://localhost:${config.server.port}/api/datasets/air-pollution-regions/data`);
+  console.log(`   http://192.168.1.27:${config.server.port}/api/datasets/air-pollution-regions/data`);
   console.log('=' .repeat(50));
 });
 
