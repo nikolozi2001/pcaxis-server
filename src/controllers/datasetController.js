@@ -71,15 +71,11 @@ export class DatasetController {
         });
       }
 
-      console.log(`🌐 Fetching metadata for '${id}' in language: ${lang}`);
-
       const dataset = DATASETS[id];
       
       // Use the updated service with language support
       const baseUrl = pxwebService.baseUrl.replace('/ka/', `/${lang}/`);
       const metaUrl = `${baseUrl}/${dataset.path}`;
-      
-      console.log(`🔍 Metadata URL: ${metaUrl}`);
       
       const response = await fetch(metaUrl, {
         headers: { 'Accept': 'application/json' }
@@ -126,8 +122,6 @@ export class DatasetController {
           message: `Dataset with id '${id}' does not exist`
         });
       }
-
-      console.log(`🌐 Processing dataset '${id}' in language: ${lang}`);
 
       const dataset = DATASETS[id];
       const { dataset: jsonStatDataset } = await pxwebService.fetchData(dataset.path, lang);

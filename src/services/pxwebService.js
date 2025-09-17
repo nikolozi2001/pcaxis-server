@@ -19,9 +19,6 @@ export class PXWebService {
    */
   async fetchData(datasetPath, language = 'ka') {
     try {
-      // 🔍 DEBUG: Log the language being used
-      console.log(`🌐 Fetching data in language: ${language}`);
-      
       // 1. Get metadata
       const metadata = await this._fetchMetadata(datasetPath, language);
       
@@ -67,8 +64,6 @@ export class PXWebService {
     const baseUrl = this.baseUrl.replace('/ka/', `/${language}/`);
     const metaUrl = `${baseUrl}/${datasetPath}`;
     
-    console.log(`🔍 Fetching metadata from: ${metaUrl}`);
-    
     const response = await this._makeRequest(metaUrl, {
       headers: { 'Accept': 'application/json' }
     });
@@ -102,8 +97,6 @@ export class PXWebService {
   async _fetchRawData(datasetPath, query, language = 'ka') {
     const baseUrl = this.baseUrl.replace('/ka/', `/${language}/`);
     const dataUrl = `${baseUrl}/${datasetPath}`;
-    
-    console.log(`🔍 Fetching data from: ${dataUrl}`);
     
     const response = await this._makeRequest(dataUrl, {
       method: 'POST',
