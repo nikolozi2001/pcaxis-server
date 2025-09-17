@@ -61,6 +61,7 @@ export class DatasetController {
   async getMetadata(req, res) {
     try {
       const { id } = req.params;
+      const { lang = 'ka' } = req.query; // Default to Georgian, allow English with ?lang=en
       
       if (!DATASETS[id]) {
         return res.status(404).json({
@@ -70,8 +71,15 @@ export class DatasetController {
         });
       }
 
+      console.log(`🌐 Fetching metadata for '${id}' in language: ${lang}`);
+
       const dataset = DATASETS[id];
-      const metaUrl = `${pxwebService.baseUrl}/${dataset.path}`;
+      
+      // Use the updated service with language support
+      const baseUrl = pxwebService.baseUrl.replace('/ka/', `/${lang}/`);
+      const metaUrl = `${baseUrl}/${dataset.path}`;
+      
+      console.log(`🔍 Metadata URL: ${metaUrl}`);
       
       const response = await fetch(metaUrl, {
         headers: { 'Accept': 'application/json' }
@@ -88,7 +96,8 @@ export class DatasetController {
         success: true,
         data: {
           ...dataset,
-          metadata: processedMetadata
+          metadata: processedMetadata,
+          language: lang
         }
       });
     } catch (error) {
@@ -108,6 +117,7 @@ export class DatasetController {
   async getData(req, res) {
     try {
       const { id } = req.params;
+      const { lang = 'ka' } = req.query; // Default to Georgian, allow English with ?lang=en
       
       if (!DATASETS[id]) {
         return res.status(404).json({
@@ -117,15 +127,18 @@ export class DatasetController {
         });
       }
 
+      console.log(`🌐 Processing dataset '${id}' in language: ${lang}`);
+
       const dataset = DATASETS[id];
-      const { dataset: jsonStatDataset } = await pxwebService.fetchData(dataset.path);
+      const { dataset: jsonStatDataset } = await pxwebService.fetchData(dataset.path, lang);
       const processedData = dataProcessingService.processForChart(jsonStatDataset);
 
       res.json({
         success: true,
         data: {
           ...dataset,
-          ...processedData
+          ...processedData,
+          language: lang
         }
       });
     } catch (error) {

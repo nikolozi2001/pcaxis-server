@@ -14,12 +14,16 @@ export class PXWebService {
   /**
    * Fetch data from PXWeb API
    * @param {string} datasetPath - Path to the dataset
+   * @param {string} language - Language code ('ka' for Georgian, 'en' for English)
    * @returns {Promise<Object>} - Object containing metadata, dataset, and raw data
    */
-  async fetchData(datasetPath) {
+  async fetchData(datasetPath, language = 'ka') {
     try {
+      // 🔍 DEBUG: Log the language being used
+      console.log(`🌐 Fetching data in language: ${language}`);
+      
       // 1. Get metadata
-      const metadata = await this._fetchMetadata(datasetPath);
+      const metadata = await this._fetchMetadata(datasetPath, language);
       
       if (!metadata?.variables?.length) {
         throw new Error('Invalid metadata: missing variables');
@@ -29,7 +33,7 @@ export class PXWebService {
       const query = this._buildQuery(metadata.variables);
 
       // 3. Fetch actual data
-      const rawData = await this._fetchRawData(datasetPath, query);
+      const rawData = await this._fetchRawData(datasetPath, query, language);
       
       // 4. Process with JSON-Stat
       const jstat = JSONstat(rawData);
@@ -45,7 +49,8 @@ export class PXWebService {
       return {
         metadata,
         dataset,
-        rawData
+        rawData,
+        language
       };
     } catch (error) {
       throw new Error(`PXWeb API error: ${error.message}`);
@@ -55,10 +60,15 @@ export class PXWebService {
   /**
    * Fetch metadata for a dataset
    * @param {string} datasetPath 
+   * @param {string} language - Language code ('ka' or 'en')
    * @returns {Promise<Object>}
    */
-  async _fetchMetadata(datasetPath) {
-    const metaUrl = `${this.baseUrl}/${datasetPath}`;
+  async _fetchMetadata(datasetPath, language = 'ka') {
+    const baseUrl = this.baseUrl.replace('/ka/', `/${language}/`);
+    const metaUrl = `${baseUrl}/${datasetPath}`;
+    
+    console.log(`🔍 Fetching metadata from: ${metaUrl}`);
+    
     const response = await this._makeRequest(metaUrl, {
       headers: { 'Accept': 'application/json' }
     });
@@ -86,10 +96,15 @@ export class PXWebService {
    * Fetch raw data from PXWeb API
    * @param {string} datasetPath 
    * @param {Array} query 
+   * @param {string} language - Language code ('ka' or 'en')
    * @returns {Promise<Object>}
    */
-  async _fetchRawData(datasetPath, query) {
-    const dataUrl = `${this.baseUrl}/${datasetPath}`;
+  async _fetchRawData(datasetPath, query, language = 'ka') {
+    const baseUrl = this.baseUrl.replace('/ka/', `/${language}/`);
+    const dataUrl = `${baseUrl}/${datasetPath}`;
+    
+    console.log(`🔍 Fetching data from: ${dataUrl}`);
+    
     const response = await this._makeRequest(dataUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

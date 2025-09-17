@@ -9,6 +9,25 @@ export class DataProcessingService {
    * @returns {Object} - Processed data for charts
    */
   processForChart(dataset) {
+    // 🔍 DEBUG: Log the raw dataset structure
+    console.log('🔍 Raw Dataset Structure:');
+    console.log('Dataset label:', dataset.label);
+    console.log('Dataset dimensions:', dataset.id);
+    
+    // Log dimension details
+    dataset.id.forEach(dimId => {
+      const dimension = dataset.Dimension(dimId);
+      console.log(`\n📊 Dimension: ${dimId}`);
+      console.log(`   Label: ${dimension.label}`);
+      console.log(`   Size: ${dimension.size}`);
+      
+      const category = dimension.Category();
+      if (category) {
+        console.log(`   Category labels:`, category.label);
+        console.log(`   Category index:`, category.index);
+      }
+    });
+
     const dimIds = dataset.id;
     const yearDimId = this._findYearDimension(dimIds);
     const otherDims = dimIds.filter(d => d !== yearDimId);
@@ -221,6 +240,31 @@ export class DataProcessingService {
    * @returns {Object}
    */
   processMetadata(metadata) {
+    // 🔍 DEBUG: Log the full metadata structure
+    console.log('🔍 Full Metadata Structure:');
+    console.log(JSON.stringify(metadata, null, 2));
+    
+    // 🔍 DEBUG: Log each variable in detail
+    if (metadata.variables) {
+      metadata.variables.forEach((variable, index) => {
+        console.log(`\n📊 Variable ${index + 1}: ${variable.code}`);
+        console.log(`   Text: ${variable.text}`);
+        console.log(`   Values:`, variable.values);
+        console.log(`   ValueTexts:`, variable.valueTexts);
+        
+        // Check if there are any other properties that might contain English translations
+        const otherProps = Object.keys(variable).filter(key => 
+          !['code', 'text', 'values', 'valueTexts', 'time'].includes(key)
+        );
+        if (otherProps.length > 0) {
+          console.log(`   🔍 Other properties:`, otherProps);
+          otherProps.forEach(prop => {
+            console.log(`      ${prop}:`, variable[prop]);
+          });
+        }
+      });
+    }
+
     return {
       title: metadata.title || 'Unknown Dataset',
       variables: metadata.variables?.map(v => ({
