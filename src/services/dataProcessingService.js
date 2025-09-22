@@ -284,36 +284,20 @@ export class DataProcessingService {
     return {
       title: metadata.title || 'Unknown Dataset',
       variables: metadata.variables?.map(v => {
-        // Check if values are already numeric indices
-        const hasNumericValues = v.values && v.values.every(val => /^\d+$/.test(val));
-        
-        if (hasNumericValues) {
-          // Values are already numeric, keep as-is
-          return {
-            code: v.code,
-            text: v.text,
-            values: v.values,
-            valueTexts: v.valueTexts,
-            time: v.time || false
-          };
-        } else {
-          // Values contain text, convert to numeric indices
-          // Filter out empty values first
-          const cleanValues = v.values ? v.values.filter(val => val && val.trim() !== '') : [];
-          const numericValues = cleanValues.map((_, index) => index.toString());
-          
-          return {
-            code: v.code,
-            text: v.text,
-            values: numericValues,
-            valueTexts: cleanValues,
-            time: v.time || false
-          };
-        }
+        // For protected areas datasets, keep the original valueTexts (which should be in the correct language)
+        const originalValues = v.values || [];
+        return {
+          code: v.code,
+          text: v.text,
+          values: originalValues.map((_, index) => index.toString()), // Convert to string indices
+          valueTexts: v.valueTexts || [], // Keep original valueTexts from PXWeb API
+          time: v.time || false
+        };
       }) || [],
       updated: metadata.updated || null,
       source: metadata.source || null,
-      note: metadata.note || null
+      note: metadata.note || null,
+      language: metadata.language || 'ka'
     };
   }
 }

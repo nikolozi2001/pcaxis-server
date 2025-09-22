@@ -73,19 +73,8 @@ export class DatasetController {
 
       const dataset = DATASETS[id];
       
-      // Use the updated service with language support
-      const baseUrl = pxwebService.baseUrl.replace('/ka/', `/${lang}/`);
-      const metaUrl = `${baseUrl}/${dataset.path}`;
-      
-      const response = await fetch(metaUrl, {
-        headers: { 'Accept': 'application/json' }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      const metadata = await response.json();
+      // Fetch metadata in the requested language
+      const { metadata } = await pxwebService.fetchData(dataset.path, lang);
       const processedMetadata = dataProcessingService.processMetadata(metadata);
 
       res.json({

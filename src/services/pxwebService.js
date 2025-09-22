@@ -72,7 +72,12 @@ export class PXWebService {
       throw new Error(`Metadata fetch failed: ${response.status}`);
     }
     
-    return await response.json();
+    const metadata = await response.json();
+    
+    // Ensure the language information is attached to the metadata
+    metadata.language = language;
+    
+    return metadata;
   }
 
   /**
