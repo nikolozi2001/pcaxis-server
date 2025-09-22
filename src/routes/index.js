@@ -5,12 +5,14 @@ import express from 'express';
 import datasetRoutes from './datasets.js';
 import healthRoutes from './health.js';
 import navigationRoutes from './navigation.js';
+import airQualityRoutes from './airQuality.js';
 
 const router = express.Router();
 
 // API Routes
 router.use('/datasets', datasetRoutes);
 router.use('/navigation', navigationRoutes);
+router.use('/air-quality', airQualityRoutes);
 
 // Health Routes
 router.use('/health', healthRoutes);
@@ -19,11 +21,12 @@ router.use('/health', healthRoutes);
 router.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'PXWeb API Server',
+    message: 'PXWeb Environmental API Server',
     version: '1.0.0',
     endpoints: {
       datasets: '/api/datasets',
       navigation: '/api/navigation',
+      airQuality: '/api/air-quality',
       health: '/health'
     },
     documentation: {
@@ -33,11 +36,15 @@ router.get('/', (req, res) => {
         data: 'GET /api/datasets/:id/data',
         jsonstat: 'GET /api/datasets/:id/jsonstat'
       },
+      airQuality: {
+        latest: 'GET /api/air-quality/latest',
+        stations: 'GET /api/air-quality/stations',
+        pollutant: 'GET /api/air-quality/pollutant/:pollutant',
+        summary: 'GET /api/air-quality/summary'
+      },
       navigation: {
-        explore: 'GET /api/navigation/explore?path=...',
-        categories: 'GET /api/navigation/categories',
-        discover: 'GET /api/navigation/discover?path=...&maxDepth=2',
-        environment: 'GET /api/navigation/environment'
+        explore: 'GET /api/navigation/explore',
+        categories: 'GET /api/navigation/categories'
       },
       health: {
         simple: 'GET /health',

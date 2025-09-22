@@ -23,6 +23,9 @@ const server = app.listen(config.server.port, config.server.host, () => {
   console.log(`   📄 GET  /api/datasets/:id/metadata - Dataset metadata`);
   console.log(`   📊 GET  /api/datasets/:id/data     - Chart-ready data`);
   console.log(`   🔢 GET  /api/datasets/:id/jsonstat - Raw JSON-Stat`);
+  console.log(`   🌬️  GET  /api/air-quality/latest   - Latest air quality`);
+  console.log(`   🏭 GET  /api/air-quality/summary  - Air quality summary`);
+  console.log(`   🗺️  GET  /api/navigation/explore   - Navigation API`);
   console.log(`   ❤️  GET  /health                   - Health check`);
   console.log(`   🔧 GET  /health/status            - System status`);
   console.log('=' .repeat(50));
