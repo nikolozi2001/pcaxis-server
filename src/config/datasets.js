@@ -71,19 +71,29 @@ export const DATASETS = {
   },
 
   // Protected Areas
-  'protected-areas': {
-    id: 'protected-areas',
-    name: 'Protected Areas',
-    description: 'Statistics on protected areas and nature reserves',
-    path: 'Environment%20Statistics/Protected%20Areas/01_Protected_Areas.px',
-    category: 'environment'
+  'protected-areas-categories': {
+    id: 'protected-areas-categories',
+    name: 'Protected Areas Categories',
+    description: 'საქართველოს დაცული ტერიტორიების კატეგორიები და ფართობი (ჰექტარი)',
+    path: 'Environment%20Statistics/Protected%20Areas/Protected-areas.px',
+    category: 'environment',
+    subcategory: 'protected-areas'
   },
-  'biodiversity-indicators': {
-    id: 'biodiversity-indicators',
-    name: 'Biodiversity Indicators',
-    description: 'Biodiversity and ecosystem indicators',
-    path: 'Environment%20Statistics/Protected%20Areas/02_Biodiversity_Indicators.px',
-    category: 'environment'
+  'protected-areas-birds': {
+    id: 'protected-areas-birds',
+    name: 'Bird Species in Protected Areas',
+    description: 'დაცულ ტერიტორიებზე აღრიცხულ ფრინველთა ძირითადი სახეობები',
+    path: 'Environment%20Statistics/Protected%20Areas/Birds_species_preserved_in_protected.px',
+    category: 'environment',
+    subcategory: 'protected-areas'
+  },
+  'protected-areas-mammals': {
+    id: 'protected-areas-mammals',
+    name: 'Mammal Species in Protected Areas',
+    description: 'დაცულ ტერიტორიებზე აღრიცხულ ძუძუმწოვართა ძირითადი სახეობები',
+    path: 'Environment%20Statistics/Protected%20Areas/Mammals_preserved_in_protected_areas.px',
+    category: 'environment',
+    subcategory: 'protected-areas'
   },
 
   // Environmental Indicators

@@ -153,13 +153,16 @@ pcaxis-server/
   - **Data Reduction**: 24 original categories reduced to 8 filtered emission categories
   - **Category Focus**: Excludes "წარმოქმნილი" (generated) and "დაჭერილი" (captured) values
 
+#### 🏞️ Protected Areas (დაცული ტერიტორიები)
+- `protected-areas-categories` - Protected area categories and areas (საქართველოს დაცული ტერიტორიების კატეგორიები და ფართობი)
+- `protected-areas-birds` - Bird species recorded in protected areas (დაცულ ტერიტორიებზე აღრიცხულ ფრინველთა ძირითადი სახეობები)
+- `protected-areas-mammals` - Mammal species recorded in protected areas (დაცულ ტერიტორიებზე აღრიცხულ ძუძუმწოვართა ძირითადი სახეობები)
+
 #### 🗑️ Waste Management & Other Environmental Data
 - `municipal-waste` - Municipal waste statistics
 - `waste-recycling` - Waste recycling data
 - `forest-area` - Forest area coverage
 - `forest-production` - Forest production statistics
-- `protected-areas` - Protected areas statistics
-- `biodiversity-indicators` - Biodiversity indicators
 - `environmental-indicators` - Key environmental indicators
 - `climate-indicators` - Climate change indicators
 - `natural-disasters` - Natural disaster statistics
@@ -192,8 +195,14 @@ curl http://localhost:3000/api/datasets/transport-emissions/data
 # Get stationary source pollution data (filtered to show only emitted values)
 curl http://localhost:3000/api/datasets/stationary-source-pollution/data
 
+# Get protected areas categories and areas data
+curl http://localhost:3000/api/datasets/protected-areas-categories/data
+
+# Get bird species in protected areas data
+curl http://localhost:3000/api/datasets/protected-areas-birds/data
+
 # From another PC on the network
-curl http://192.168.1.27:3000/api/datasets/stationary-source-pollution/data
+curl http://192.168.1.27:3000/api/datasets/protected-areas-mammals/data
 ```
 
 ### Navigation & Discovery
