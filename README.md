@@ -8,20 +8,22 @@ A modern Node.js API server for accessing Georgian statistical data from the PXW
 - **Real Air Pollution Datasets** - Added 4 authentic air pollution datasets from Georgian National Statistics
 - **Regional Coverage** - Air pollution data by Georgian regions and cities
 - **Transport Emissions** - Vehicle emission data by pollutant type
-- **Stationary Sources** - Industrial pollution data by category
+- **Stationary Sources** - Industrial pollution data by category with filtered emissions
 - **Georgian Language Support** - All dataset descriptions in Georgian
+- **Dataset-specific Processing** - Custom data filtering for enhanced usability
 
 ### New Air Pollution Endpoints 🌬️
 - `air-pollution-regions` - ატმოსფერული ჰაერის დაბინძურება
 - `air-pollution-cities` - ცალკეულ ქალაქებში მავნე ნივთიერებები
 - `transport-emissions` - ავტოტრანსპორტის ემისიები
-- `stationary-source-pollution` - სტაციონარული წყაროებიდან დაბინძურება
+- `stationary-source-pollution` - სტაციონარული წყაროებიდან დაბინძურება (ფილტრირებული ემისიები)
 
 ## 🚀 Features
 
 - **RESTful API** - Clean, well-structured endpoints
 - **Multiple Data Categories** - Demographics and Environmental statistics
 - **Data Processing** - Automatic data transformation for charts and visualizations
+- **Dataset-specific Processing** - Custom filtering and processing for individual datasets
 - **API Navigation** - Dynamic exploration of PXWeb database structure
 - **Error Handling** - Comprehensive error handling and logging
 - **CORS Support** - Cross-origin resource sharing enabled
@@ -147,6 +149,9 @@ pcaxis-server/
 - `air-pollution-cities` - Harmful substances in cities from stationary sources (thousand tons)
 - `transport-emissions` - Harmful substances emitted by vehicles by type (thousand tons)
 - `stationary-source-pollution` - Harmful substances from stationary sources by category (thousand tons)
+  - **Special Processing**: Filtered to show only "გაფრქვეული" (emitted) pollution values
+  - **Data Reduction**: 24 original categories reduced to 8 filtered emission categories
+  - **Category Focus**: Excludes "წარმოქმნილი" (generated) and "დაჭერილი" (captured) values
 
 #### 🗑️ Waste Management & Other Environmental Data
 - `municipal-waste` - Municipal waste statistics
@@ -183,6 +188,9 @@ curl http://localhost:3000/api/datasets/air-pollution-cities/data
 
 # Get transport emissions data
 curl http://localhost:3000/api/datasets/transport-emissions/data
+
+# Get stationary source pollution data (filtered to show only emitted values)
+curl http://localhost:3000/api/datasets/stationary-source-pollution/data
 
 # From another PC on the network
 curl http://192.168.1.27:3000/api/datasets/stationary-source-pollution/data
@@ -250,6 +258,46 @@ All API responses follow a consistent format:
 }
 ```
 
+## ⚙️ Dataset-specific Processing
+
+Some datasets have custom processing logic to enhance data usability and focus on specific use cases:
+
+### Stationary Source Pollution Dataset
+
+The `stationary-source-pollution` dataset implements specialized filtering to show only emitted pollution values:
+
+**Original Data Structure:**
+- 8 hazardous substances × 3 pollution types = 24 total categories
+- Pollution types: წარმოქმნილი (generated), დაჭერილი (captured), გაფრქვეული (emitted)
+
+**Filtered Data Structure:**
+- 8 hazardous substances × 1 pollution type = 8 filtered categories
+- Only "გაფრქვეული" (emitted) values are returned
+
+**Filtered Categories:**
+1. მავნე ნივთიერებები - გაფრქვეული (Hazardous substances - emitted)
+2. მყარი - გაფრქვეული (Solid - emitted)
+3. აირადი და თხევადი - გაფრქვეული (Gas and liquid - emitted)
+4. გოგირდოვანი ანჰიდრიდი - გაფრქვეული (Sulfur dioxide - emitted)
+5. ნახშირჟანგი - გაფრქვეული (Carbon monoxide - emitted)
+6. აზოტის ჟანგი - გაფრქვეული (Nitrogen oxide - emitted)
+7. ნახშირწყალბადი - გაფრქვეული (Hydrocarbon - emitted)
+8. დანარჩენი - გაფრქვეული (Other - emitted)
+
+**Benefits:**
+- Simplified data visualization focusing on actual emissions
+- Reduced data complexity for end users
+- Consistent with environmental reporting standards
+- Maintains all historical data (2005-2021)
+
+```bash
+# Example: Get filtered stationary source pollution data
+curl http://localhost:3000/api/datasets/stationary-source-pollution/data
+
+# Response includes only emitted pollution categories (0-7 indices)
+# Other datasets remain unaffected by this filtering
+```
+
 ## 🔧 Configuration
 
 The server can be configured via environment variables:
@@ -279,6 +327,22 @@ node test-air-pollution.js
 1. **Manual Addition:** Add dataset configuration to `src/config/datasets.js`
 2. **Dynamic Discovery:** Use navigation endpoints to discover new tables
 3. **Automatic:** The dataset will be available through the API
+
+### Dataset-specific Processing
+
+To add custom processing for specific datasets:
+
+1. **Modify Processing Service:** Add custom logic in `src/services/dataProcessingService.js`
+2. **Conditional Processing:** Use dataset ID to apply specific transformations
+3. **Maintain API Consistency:** Ensure response format remains consistent
+
+Example implementation:
+```javascript
+// In dataProcessingService.js
+if (datasetId === 'your-special-dataset') {
+  return this._processSpecialDataset(processedData);
+}
+```
 
 ### Project Scripts
 

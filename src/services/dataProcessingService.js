@@ -6,9 +6,10 @@ export class DataProcessingService {
   /**
    * Process dataset into chart-friendly format
    * @param {Object} dataset - JSON-Stat dataset
+   * @param {string} datasetId - Dataset identifier for special handling
    * @returns {Object} - Processed data for charts
    */
-  processForChart(dataset) {
+  processForChart(dataset, datasetId = null) {
     const dimIds = dataset.id;
     const yearDimId = this._findYearDimension(dimIds);
     const otherDims = dimIds.filter(d => d !== yearDimId);
@@ -24,7 +25,7 @@ export class DataProcessingService {
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
       // Three or more dimensions (complex multi-dimensional data)
-      return this._processMultiDimensions(dataset, years, yearDimId, otherDims);
+      return this._processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId);
     }
   }
 
@@ -109,9 +110,16 @@ export class DataProcessingService {
    * @param {Array} years 
    * @param {string} yearDimId 
    * @param {Array} otherDims 
+   * @param {string} datasetId - Dataset identifier for special handling
    * @returns {Object}
    */
-  _processMultiDimensions(dataset, years, yearDimId, otherDims) {
+  _processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId = null) {
+    // Special handling for stationary-source-pollution dataset
+    if (datasetId === 'stationary-source-pollution') {
+      return this._processStationarySourcePollution(dataset, years, yearDimId, otherDims);
+    }
+
+    // Default processing for other datasets
     // For 3D data, we'll flatten it by creating separate series for each combination
     const allCombinations = this._getAllDimensionCombinations(dataset, otherDims);
     const data = [];
@@ -140,6 +148,58 @@ export class DataProcessingService {
         yearRange: this._getYearRange(years),
         dimensionCount: otherDims.length + 1,
         seriesCount: allCombinations.length
+      }
+    };
+  }
+
+  /**
+   * Special processing for stationary-source-pollution dataset with numeric indices
+   * @param {Object} dataset 
+   * @param {Array} years 
+   * @param {string} yearDimId 
+   * @param {Array} otherDims 
+   * @returns {Object}
+   */
+  _processStationarySourcePollution(dataset, years, yearDimId, otherDims) {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && year.toString().trim() !== '');
+    
+    // For 3D data, create separate series for each combination
+    const allCombinations = this._getAllDimensionCombinations(dataset, otherDims);
+    
+    // Filter to keep only "გაფრქვეული" (emitted) combinations
+    const emittedCombinations = allCombinations.filter(combo => 
+      combo.label.includes('გაფრქვეული')
+    );
+    
+    const data = [];
+
+    // Create a row for each valid year with numeric indices
+    validYears.forEach((year, yearIndex) => {
+      const row = { year: yearIndex.toString() }; // Convert to numeric index
+      
+      emittedCombinations.forEach((combo, comboIndex) => {
+        const queryObj = { [yearDimId]: year, ...combo.values };
+        const cell = dataset.Data(queryObj);
+        row[comboIndex.toString()] = cell ? Number(cell.value) : null; // Use numeric indices
+      });
+      
+      data.push(row);
+    });
+
+    return {
+      title: dataset.label || 'Dataset',
+      dimensions: [yearDimId, ...otherDims],
+      categories: emittedCombinations.map((combo, index) => index.toString()), // Use numeric indices
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(validYears),
+        dimensionCount: otherDims.length + 1,
+        seriesCount: emittedCombinations.length,
+        yearMapping: validYears.map((year, index) => ({ index: index.toString(), value: year })), // Provide year mapping
+        categoryMapping: emittedCombinations.map((combo, index) => ({ index: index.toString(), label: combo.label })) // Provide category mapping
       }
     };
   }

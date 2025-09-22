@@ -125,7 +125,7 @@ export class DatasetController {
 
       const dataset = DATASETS[id];
       const { dataset: jsonStatDataset } = await pxwebService.fetchData(dataset.path, lang);
-      const processedData = dataProcessingService.processForChart(jsonStatDataset);
+      const processedData = dataProcessingService.processForChart(jsonStatDataset, id); // Pass dataset ID
 
       res.json({
         success: true,
