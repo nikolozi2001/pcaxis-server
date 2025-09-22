@@ -223,13 +223,34 @@ export class DataProcessingService {
   processMetadata(metadata) {
     return {
       title: metadata.title || 'Unknown Dataset',
-      variables: metadata.variables?.map(v => ({
-        code: v.code,
-        text: v.text,
-        values: v.values,
-        valueTexts: v.valueTexts,
-        time: v.time || false
-      })) || [],
+      variables: metadata.variables?.map(v => {
+        // Check if values are already numeric indices
+        const hasNumericValues = v.values && v.values.every(val => /^\d+$/.test(val));
+        
+        if (hasNumericValues) {
+          // Values are already numeric, keep as-is
+          return {
+            code: v.code,
+            text: v.text,
+            values: v.values,
+            valueTexts: v.valueTexts,
+            time: v.time || false
+          };
+        } else {
+          // Values contain text, convert to numeric indices
+          // Filter out empty values first
+          const cleanValues = v.values ? v.values.filter(val => val && val.trim() !== '') : [];
+          const numericValues = cleanValues.map((_, index) => index.toString());
+          
+          return {
+            code: v.code,
+            text: v.text,
+            values: numericValues,
+            valueTexts: cleanValues,
+            time: v.time || false
+          };
+        }
+      }) || [],
       updated: metadata.updated || null,
       source: metadata.source || null,
       note: metadata.note || null
