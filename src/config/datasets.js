@@ -96,6 +96,17 @@ export const DATASETS = {
     subcategory: 'protected-areas'
   },
 
+  // Water Resources
+  'water-abstraction': {
+    id: 'water-abstraction',
+    name: 'Water Abstraction and Protection',
+    nameKa: 'წყლის რესურსების დაცვა და გამოყენება',
+    description: 'წყლის რესურსების დაცვა და გამოყენება',
+    path: 'Environment%20Statistics/Water%20Resources/Water_Abstraction5.px',
+    category: 'environment',
+    subcategory: 'water-resources'
+  },
+
   // Environmental Indicators
   'environmental-indicators': {
     id: 'environmental-indicators',
