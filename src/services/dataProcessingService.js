@@ -20,11 +20,11 @@ export class DataProcessingService {
     if (otherDims.length === 0) {
       // Single dimension (only years)
       return this._processSingleDimension(dataset, years, yearDimId);
-    } else if (otherDims.length === 1) {
-      // Two dimensions (years + one category)
+    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction') {
+      // Two dimensions (years + one category) - except for water-abstraction
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
-      // Three or more dimensions (complex multi-dimensional data)
+      // Three or more dimensions (complex multi-dimensional data) OR water-abstraction
       return this._processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId);
     }
   }
@@ -119,6 +119,11 @@ export class DataProcessingService {
       return this._processStationarySourcePollution(dataset, years, yearDimId, otherDims);
     }
 
+    // Special handling for water-abstraction dataset (treat as multi-dimensional)
+    if (datasetId === 'water-abstraction') {
+      return this._processWaterAbstractionSpecial(dataset, years, yearDimId, otherDims);
+    }
+
     // Default processing for other datasets
     // For 3D data, we'll flatten it by creating separate series for each combination
     const allCombinations = this._getAllDimensionCombinations(dataset, otherDims);
@@ -200,6 +205,58 @@ export class DataProcessingService {
         seriesCount: emittedCombinations.length,
         yearMapping: validYears.map((year, index) => ({ index: index.toString(), value: year })), // Provide year mapping
         categoryMapping: emittedCombinations.map((combo, index) => ({ index: index.toString(), label: combo.label })) // Provide category mapping
+      }
+    };
+  }
+
+  /**
+   * Special processing for water-abstraction dataset with numeric indices
+   * @param {Object} dataset 
+   * @param {Array} years 
+   * @param {string} yearDimId 
+   * @param {Array} otherDims 
+   * @returns {Object}
+   */
+  _processWaterAbstractionSpecial(dataset, years, yearDimId, otherDims) {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && year.toString().trim() !== '');
+    
+    // Get the categories dimension
+    const categoryDim = otherDims.find(dim => dim === 'Categories') || otherDims[0];
+    const categoryValues = dataset.Dimension(categoryDim).id;
+    const categoryLabels = this._getCategoryLabels(dataset, categoryDim);
+    
+    const data = [];
+
+    // Create a row for each valid year with numeric indices
+    validYears.forEach((year, yearIndex) => {
+      const row = { year: yearIndex.toString() }; // Convert year to numeric index
+      
+      categoryValues.forEach((categoryId, categoryIndex) => {
+        const queryObj = { [yearDimId]: year, [categoryDim]: categoryId };
+        const cell = dataset.Data(queryObj);
+        row[categoryIndex.toString()] = cell ? Number(cell.value) : null; // Use numeric indices for categories
+      });
+      
+      data.push(row);
+    });
+
+    return {
+      title: dataset.label || 'წყლის რესურსების დაცვა და გამოყენება',
+      dimensions: [yearDimId, categoryDim],
+      categories: categoryValues.map((catId, index) => index.toString()), // Use numeric indices
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(validYears),
+        dimensionCount: otherDims.length + 1,
+        seriesCount: categoryValues.length,
+        yearMapping: validYears.map((year, index) => ({ index: index.toString(), value: year })), // Provide year mapping
+        categoryMapping: categoryValues.map((catId, index) => ({ 
+          index: index.toString(), 
+          label: categoryLabels[catId] || catId 
+        })) // Provide category mapping
       }
     };
   }
