@@ -13,10 +13,10 @@ export class AirQualityController {
   async getLatestData(req, res) {
     try {
       const {
-        station = 'TSRT', // Default to Tsereteli Ave station
+        station = 'all', // Changed default to 'all' to get all stations
         municipality = 'all',
         substances = 'PM10,PM2.5,NO2,O3,SO2,CO',
-        hours = 24
+        hours = 1 // Changed to 1 hour for latest data
       } = req.query;
 
       // Parse substances parameter
@@ -28,7 +28,7 @@ export class AirQualityController {
         stationCode: station,
         municipalityId: municipality,
         substances: substanceList,
-        hours: parseInt(hours, 10) || 24
+        hours: parseInt(hours, 10) || 1
       };
 
       const airQualityData = await airQualityService.getLatestData(options);
