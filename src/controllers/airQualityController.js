@@ -177,6 +177,39 @@ export class AirQualityController {
       });
     }
   }
+
+  /**
+   * Get Tbilisi PM2.5 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getTbilisiPM25Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getTbilisiPM25Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Tbilisi',
+          substance: 'PM2.5',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Tbilisi PM2.5 average',
+        message: error.message
+      });
+    }
+  }
 }
 
 export default new AirQualityController();

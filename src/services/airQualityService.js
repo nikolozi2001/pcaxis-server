@@ -421,6 +421,144 @@ export class AirQualityService {
       throw new Error(`Failed to fetch stations: ${error.message}`);
     }
   }
+
+  /**
+   * Calculate average PM2.5 for Tbilisi stations
+   * @param {Object} options - Options for the calculation
+   * @returns {Promise<Object>} Average PM2.5 data for Tbilisi
+   */
+  async getTbilisiPM25Average(options = {}) {
+    try {
+      console.log('🔍 Calculating Tbilisi PM2.5 average...');
+      
+      // Get data from all stations
+      const allData = await this.getLatestData({
+        stationCode: 'all',
+        hoursBack: options.hoursBack || 6
+      });
+
+      // Filter Tbilisi stations (stations that have "თბილისი" in their settlement name)
+      const tbilisiStations = allData.stations.filter(station => 
+        station.settlement.includes('თბილისი')
+      );
+
+      console.log(`📍 Found ${tbilisiStations.length} Tbilisi stations`);
+
+      // Extract PM2.5 data from each station
+      const pm25Data = [];
+      const stationDetails = [];
+
+      tbilisiStations.forEach(station => {
+        const pm25Substance = station.substances.find(s => s.name === 'PM2.5');
+        
+        if (pm25Substance && pm25Substance.latestValue !== null && pm25Substance.latestValue !== undefined) {
+          pm25Data.push(pm25Substance.latestValue);
+          stationDetails.push({
+            code: station.code,
+            settlement: station.settlement,
+            address: station.address,
+            pm25Value: pm25Substance.latestValue,
+            timestamp: pm25Substance.latestTimestamp,
+            dataAge: pm25Substance.dataAge,
+            qualityLevel: pm25Substance.qualityLevel
+          });
+          console.log(`   ✅ ${station.code}: ${pm25Substance.latestValue.toFixed(2)} μg/m³`);
+        } else {
+          console.log(`   ❌ ${station.code}: No PM2.5 data available`);
+          stationDetails.push({
+            code: station.code,
+            settlement: station.settlement,
+            address: station.address,
+            pm25Value: null,
+            timestamp: null,
+            dataAge: null,
+            qualityLevel: 'no_data'
+          });
+        }
+      });
+
+      if (pm25Data.length === 0) {
+        throw new Error('No PM2.5 data available from any Tbilisi station');
+      }
+
+      // Calculate average
+      const sum = pm25Data.reduce((acc, value) => acc + value, 0);
+      const average = sum / pm25Data.length;
+      const stationsWithData = pm25Data.length;
+      const totalStations = tbilisiStations.length;
+
+      // Determine overall quality level based on average
+      let averageQualityLevel = 'unknown';
+      if (average >= 0 && average < 12) {
+        averageQualityLevel = 'good';
+      } else if (average >= 12 && average < 25) {
+        averageQualityLevel = 'fair';
+      } else if (average >= 25 && average < 35) {
+        averageQualityLevel = 'moderate';
+      } else if (average >= 35 && average < 60) {
+        averageQualityLevel = 'poor';
+      } else if (average >= 60) {
+        averageQualityLevel = 'very_poor';
+      }
+
+      // Find the most recent timestamp among all stations
+      let mostRecentTimestamp = null;
+      let oldestDataAgeMinutes = 0;
+      
+      stationDetails.forEach(station => {
+        if (station.timestamp && station.dataAge) {
+          const stationTime = new Date(station.timestamp);
+          if (!mostRecentTimestamp || stationTime > mostRecentTimestamp) {
+            mostRecentTimestamp = stationTime;
+          }
+          if (station.dataAge.ageMinutes > oldestDataAgeMinutes) {
+            oldestDataAgeMinutes = station.dataAge.ageMinutes;
+          }
+        }
+      });
+
+      console.log(`📊 Average PM2.5: ${average.toFixed(2)} μg/m³ (${averageQualityLevel})`);
+      console.log(`📈 Based on ${stationsWithData}/${totalStations} stations with data`);
+
+      return {
+        success: true,
+        timestamp: new Date().toISOString(),
+        currentGeorgiaTime: this.getCurrentGeorgiaTime().toLocaleString('en-US', {
+          timeZone: 'Asia/Tbilisi',
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }),
+        city: 'Tbilisi',
+        substance: 'PM2.5',
+        average: {
+          value: parseFloat(average.toFixed(2)),
+          unit: 'μg/m³',
+          qualityLevel: averageQualityLevel,
+          calculation: {
+            sum: parseFloat(sum.toFixed(2)),
+            stationsWithData: stationsWithData,
+            totalStations: totalStations,
+            formula: `${sum.toFixed(2)} ÷ ${stationsWithData} = ${average.toFixed(2)}`
+          }
+        },
+        stations: stationDetails,
+        dataFreshness: {
+          mostRecentTimestamp: mostRecentTimestamp?.toISOString(),
+          oldestDataAgeMinutes: oldestDataAgeMinutes,
+          note: oldestDataAgeMinutes > 60 ? 'Some station data may have processing delays' : null
+        },
+        requestOptions: options
+      };
+
+    } catch (error) {
+      console.error('Error calculating Tbilisi PM2.5 average:', error);
+      throw new Error(`Failed to calculate Tbilisi PM2.5 average: ${error.message}`);
+    }
+  }
 }
 
 export default new AirQualityService();

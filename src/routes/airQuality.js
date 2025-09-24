@@ -39,4 +39,11 @@ router.get('/pollutant/:pollutant', airQualityController.getPollutantData);
  */
 router.get('/summary', airQualityController.getSummary);
 
+/**
+ * @route GET /api/air-quality/tbilisi/pm25-average
+ * @desc Get PM2.5 average for all Tbilisi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/tbilisi/pm25-average', airQualityController.getTbilisiPM25Average);
+
 export default router;
