@@ -423,13 +423,22 @@ export class AirQualityService {
   }
 
   /**
-   * Calculate average PM2.5 for Tbilisi stations
+   * Calculate average for a specific pollutant for Tbilisi stations
+   * @param {string} pollutant - The pollutant name (PM10, PM2.5, NO2, O3, SO2, CO)
    * @param {Object} options - Options for the calculation
-   * @returns {Promise<Object>} Average PM2.5 data for Tbilisi
+   * @returns {Promise<Object>} Average pollutant data for Tbilisi
    */
-  async getTbilisiPM25Average(options = {}) {
+  async getTbilisiPollutantAverage(pollutant, options = {}) {
     try {
-      console.log('🔍 Calculating Tbilisi PM2.5 average...');
+      console.log(`🔍 Calculating Tbilisi ${pollutant} average...`);
+      
+      // Validate pollutant
+      const validPollutants = ['PM10', 'PM2.5', 'NO2', 'O3', 'SO2', 'CO'];
+      if (!validPollutants.includes(pollutant.toUpperCase())) {
+        throw new Error(`Invalid pollutant: ${pollutant}. Must be one of: ${validPollutants.join(', ')}`);
+      }
+
+      const pollutantName = pollutant.toUpperCase();
       
       // Get data from all stations
       const allData = await this.getLatestData({
@@ -444,32 +453,32 @@ export class AirQualityService {
 
       console.log(`📍 Found ${tbilisiStations.length} Tbilisi stations`);
 
-      // Extract PM2.5 data from each station
-      const pm25Data = [];
+      // Extract pollutant data from each station
+      const pollutantData = [];
       const stationDetails = [];
 
       tbilisiStations.forEach(station => {
-        const pm25Substance = station.substances.find(s => s.name === 'PM2.5');
+        const substance = station.substances.find(s => s.name === pollutantName);
         
-        if (pm25Substance && pm25Substance.latestValue !== null && pm25Substance.latestValue !== undefined) {
-          pm25Data.push(pm25Substance.latestValue);
+        if (substance && substance.latestValue !== null && substance.latestValue !== undefined) {
+          pollutantData.push(substance.latestValue);
           stationDetails.push({
             code: station.code,
             settlement: station.settlement,
             address: station.address,
-            pm25Value: pm25Substance.latestValue,
-            timestamp: pm25Substance.latestTimestamp,
-            dataAge: pm25Substance.dataAge,
-            qualityLevel: pm25Substance.qualityLevel
+            pollutantValue: substance.latestValue,
+            timestamp: substance.latestTimestamp,
+            dataAge: substance.dataAge,
+            qualityLevel: substance.qualityLevel
           });
-          console.log(`   ✅ ${station.code}: ${pm25Substance.latestValue.toFixed(2)} μg/m³`);
+          console.log(`   ✅ ${station.code}: ${substance.latestValue.toFixed(2)} ${substance.unit_en || 'μg/m³'}`);
         } else {
-          console.log(`   ❌ ${station.code}: No PM2.5 data available`);
+          console.log(`   ❌ ${station.code}: No ${pollutantName} data available`);
           stationDetails.push({
             code: station.code,
             settlement: station.settlement,
             address: station.address,
-            pm25Value: null,
+            pollutantValue: null,
             timestamp: null,
             dataAge: null,
             qualityLevel: 'no_data'
@@ -477,29 +486,18 @@ export class AirQualityService {
         }
       });
 
-      if (pm25Data.length === 0) {
-        throw new Error('No PM2.5 data available from any Tbilisi station');
+      if (pollutantData.length === 0) {
+        throw new Error(`No ${pollutantName} data available from any Tbilisi station`);
       }
 
       // Calculate average
-      const sum = pm25Data.reduce((acc, value) => acc + value, 0);
-      const average = sum / pm25Data.length;
-      const stationsWithData = pm25Data.length;
+      const sum = pollutantData.reduce((acc, value) => acc + value, 0);
+      const average = sum / pollutantData.length;
+      const stationsWithData = pollutantData.length;
       const totalStations = tbilisiStations.length;
 
-      // Determine overall quality level based on average
-      let averageQualityLevel = 'unknown';
-      if (average >= 0 && average < 12) {
-        averageQualityLevel = 'good';
-      } else if (average >= 12 && average < 25) {
-        averageQualityLevel = 'fair';
-      } else if (average >= 25 && average < 35) {
-        averageQualityLevel = 'moderate';
-      } else if (average >= 35 && average < 60) {
-        averageQualityLevel = 'poor';
-      } else if (average >= 60) {
-        averageQualityLevel = 'very_poor';
-      }
+      // Determine overall quality level based on average and pollutant type
+      let averageQualityLevel = this.determineQualityLevel(pollutantName, average);
 
       // Find the most recent timestamp among all stations
       let mostRecentTimestamp = null;
@@ -517,7 +515,7 @@ export class AirQualityService {
         }
       });
 
-      console.log(`📊 Average PM2.5: ${average.toFixed(2)} μg/m³ (${averageQualityLevel})`);
+      console.log(`📊 Average ${pollutantName}: ${average.toFixed(2)} μg/m³ (${averageQualityLevel})`);
       console.log(`📈 Based on ${stationsWithData}/${totalStations} stations with data`);
 
       return {
@@ -533,7 +531,7 @@ export class AirQualityService {
           hour12: true
         }),
         city: 'Tbilisi',
-        substance: 'PM2.5',
+        substance: pollutantName,
         average: {
           value: parseFloat(average.toFixed(2)),
           unit: 'μg/m³',
@@ -555,8 +553,139 @@ export class AirQualityService {
       };
 
     } catch (error) {
-      console.error('Error calculating Tbilisi PM2.5 average:', error);
-      throw new Error(`Failed to calculate Tbilisi PM2.5 average: ${error.message}`);
+      console.error(`Error calculating Tbilisi ${pollutant} average:`, error);
+      throw new Error(`Failed to calculate Tbilisi ${pollutant} average: ${error.message}`);
+    }
+  }
+
+  /**
+   * Determine quality level based on pollutant type and value
+   * @param {string} pollutant - Pollutant name
+   * @param {number} value - Pollutant value
+   * @returns {string} Quality level
+   */
+  determineQualityLevel(pollutant, value) {
+    const thresholds = {
+      'PM10': { good: 20, fair: 35, moderate: 50, poor: 100 },
+      'PM2.5': { good: 12, fair: 25, moderate: 35, poor: 60 },
+      'NO2': { good: 40, fair: 70, moderate: 150, poor: 200 },
+      'O3': { good: 60, fair: 120, moderate: 180, poor: 240 },
+      'SO2': { good: 20, fair: 80, moderate: 250, poor: 350 },
+      'CO': { good: 4000, fair: 8000, moderate: 15000, poor: 30000 }
+    };
+
+    const levels = thresholds[pollutant];
+    if (!levels) return 'unknown';
+
+    if (value <= levels.good) return 'good';
+    if (value <= levels.fair) return 'fair';
+    if (value <= levels.moderate) return 'moderate';
+    if (value <= levels.poor) return 'poor';
+    return 'very_poor';
+  }
+
+  /**
+   * Calculate average PM2.5 for Tbilisi stations
+   * @param {Object} options - Options for the calculation
+   * @returns {Promise<Object>} Average PM2.5 data for Tbilisi
+   */
+  async getTbilisiPM25Average(options = {}) {
+    return this.getTbilisiPollutantAverage('PM2.5', options);
+  }
+
+  /**
+   * Calculate average PM10 for Tbilisi stations
+   * @param {Object} options - Options for the calculation
+   * @returns {Promise<Object>} Average PM10 data for Tbilisi
+   */
+  async getTbilisiPM10Average(options = {}) {
+    return this.getTbilisiPollutantAverage('PM10', options);
+  }
+
+  /**
+   * Calculate average NO2 for Tbilisi stations
+   * @param {Object} options - Options for the calculation
+   * @returns {Promise<Object>} Average NO2 data for Tbilisi
+   */
+  async getTbilisiNO2Average(options = {}) {
+    return this.getTbilisiPollutantAverage('NO2', options);
+  }
+
+  /**
+   * Calculate average O3 for Tbilisi stations
+   * @param {Object} options - Options for the calculation
+   * @returns {Promise<Object>} Average O3 data for Tbilisi
+   */
+  async getTbilisiO3Average(options = {}) {
+    return this.getTbilisiPollutantAverage('O3', options);
+  }
+
+  /**
+   * Calculate average SO2 for Tbilisi stations
+   * @param {Object} options - Options for the calculation
+   * @returns {Promise<Object>} Average SO2 data for Tbilisi
+   */
+  async getTbilisiSO2Average(options = {}) {
+    return this.getTbilisiPollutantAverage('SO2', options);
+  }
+
+  /**
+   * Calculate average CO for Tbilisi stations
+   * @param {Object} options - Options for the calculation
+   * @returns {Promise<Object>} Average CO data for Tbilisi
+   */
+  async getTbilisiCOAverage(options = {}) {
+    return this.getTbilisiPollutantAverage('CO', options);
+  }
+
+  /**
+   * Get all pollutant averages for Tbilisi
+   * @param {Object} options - Options for the calculation
+   * @returns {Promise<Object>} All pollutant averages for Tbilisi
+   */
+  async getTbilisiAllPollutantsAverage(options = {}) {
+    try {
+      console.log('🔍 Calculating all pollutants averages for Tbilisi...');
+      
+      const pollutants = ['PM10', 'PM2.5', 'NO2', 'O3', 'SO2', 'CO'];
+      const results = {};
+      const errors = {};
+
+      for (const pollutant of pollutants) {
+        try {
+          const result = await this.getTbilisiPollutantAverage(pollutant, options);
+          results[pollutant] = result;
+        } catch (error) {
+          console.log(`⚠️ Failed to get ${pollutant} average: ${error.message}`);
+          errors[pollutant] = error.message;
+        }
+      }
+
+      return {
+        success: true,
+        timestamp: new Date().toISOString(),
+        currentGeorgiaTime: this.getCurrentGeorgiaTime().toLocaleString('en-US', {
+          timeZone: 'Asia/Tbilisi',
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }),
+        city: 'Tbilisi',
+        pollutantAverages: results,
+        errors: Object.keys(errors).length > 0 ? errors : undefined,
+        summary: {
+          totalPollutants: pollutants.length,
+          successfulCalculations: Object.keys(results).length,
+          failedCalculations: Object.keys(errors).length
+        }
+      };
+
+    } catch (error) {
+      console.error('Error calculating all pollutants averages:', error);
+      throw new Error(`Failed to calculate all pollutants averages: ${error.message}`);
     }
   }
 }

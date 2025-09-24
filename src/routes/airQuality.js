@@ -46,4 +46,46 @@ router.get('/summary', airQualityController.getSummary);
  */
 router.get('/tbilisi/pm25-average', airQualityController.getTbilisiPM25Average);
 
+/**
+ * @route GET /api/air-quality/tbilisi/pm10-average
+ * @desc Get PM10 average for all Tbilisi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/tbilisi/pm10-average', airQualityController.getTbilisiPM10Average);
+
+/**
+ * @route GET /api/air-quality/tbilisi/no2-average
+ * @desc Get NO2 average for all Tbilisi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/tbilisi/no2-average', airQualityController.getTbilisiNO2Average);
+
+/**
+ * @route GET /api/air-quality/tbilisi/o3-average
+ * @desc Get O3 average for all Tbilisi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/tbilisi/o3-average', airQualityController.getTbilisiO3Average);
+
+/**
+ * @route GET /api/air-quality/tbilisi/so2-average
+ * @desc Get SO2 average for all Tbilisi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/tbilisi/so2-average', airQualityController.getTbilisiSO2Average);
+
+/**
+ * @route GET /api/air-quality/tbilisi/co-average
+ * @desc Get CO average for all Tbilisi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/tbilisi/co-average', airQualityController.getTbilisiCOAverage);
+
+/**
+ * @route GET /api/air-quality/tbilisi/all-pollutants-average
+ * @desc Get averages for all pollutants from all Tbilisi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/tbilisi/all-pollutants-average', airQualityController.getTbilisiAllPollutantsAverage);
+
 export default router;

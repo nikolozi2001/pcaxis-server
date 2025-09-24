@@ -210,6 +210,204 @@ export class AirQualityController {
       });
     }
   }
+
+  /**
+   * Get Tbilisi PM10 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getTbilisiPM10Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getTbilisiPM10Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Tbilisi',
+          substance: 'PM10',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Tbilisi PM10 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Tbilisi NO2 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getTbilisiNO2Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getTbilisiNO2Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Tbilisi',
+          substance: 'NO2',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Tbilisi NO2 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Tbilisi O3 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getTbilisiO3Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getTbilisiO3Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Tbilisi',
+          substance: 'O3',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Tbilisi O3 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Tbilisi SO2 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getTbilisiSO2Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getTbilisiSO2Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Tbilisi',
+          substance: 'SO2',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Tbilisi SO2 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Tbilisi CO average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getTbilisiCOAverage(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getTbilisiCOAverage(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Tbilisi',
+          substance: 'CO',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Tbilisi CO average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get all pollutant averages for Tbilisi from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getTbilisiAllPollutantsAverage(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getTbilisiAllPollutantsAverage(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Tbilisi',
+          substances: 'All pollutants',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Tbilisi all pollutants average',
+        message: error.message
+      });
+    }
+  }
 }
 
 export default new AirQualityController();
