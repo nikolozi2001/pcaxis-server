@@ -870,6 +870,237 @@ export class AirQualityController {
       });
     }
   }
+
+  /**
+   * Get Rustavi PM2.5 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getRustaviPM25Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getRustaviPM25Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Rustavi',
+          substance: 'PM2.5',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Rustavi PM2.5 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Rustavi PM10 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getRustaviPM10Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getRustaviPM10Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Rustavi',
+          substance: 'PM10',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Rustavi PM10 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Rustavi NO2 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getRustaviNO2Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getRustaviNO2Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Rustavi',
+          substance: 'NO2',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Rustavi NO2 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Rustavi O3 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getRustaviO3Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getRustaviO3Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Rustavi',
+          substance: 'O3',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Rustavi O3 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Rustavi SO2 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getRustaviSO2Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getRustaviSO2Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Rustavi',
+          substance: 'SO2',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Rustavi SO2 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Rustavi CO average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getRustaviCOAverage(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getRustaviCOAverage(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Rustavi',
+          substance: 'CO',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Rustavi CO average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get all pollutant averages for Rustavi from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getRustaviAllPollutantsAverage(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getRustaviAllPollutantsAverage(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Rustavi',
+          substances: 'All pollutants',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Rustavi all pollutants average',
+        message: error.message
+      });
+    }
+  }
 }
 
 export default new AirQualityController();

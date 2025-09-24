@@ -193,6 +193,18 @@ pcaxis-server/
 | `GET` | `/api/air-quality/batumi/co-average` | CO average across all Batumi stations |
 | `GET` | `/api/air-quality/batumi/all-pollutants-average` | All pollutants comprehensive analysis |
 
+### Rustavi City-Wide Averages
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/air-quality/rustavi/pm10-average` | PM10 average across all Rustavi stations |
+| `GET` | `/api/air-quality/rustavi/pm25-average` | PM2.5 average across all Rustavi stations |
+| `GET` | `/api/air-quality/rustavi/no2-average` | NO2 average across all Rustavi stations |
+| `GET` | `/api/air-quality/rustavi/o3-average` | O3 average across all Rustavi stations |
+| `GET` | `/api/air-quality/rustavi/so2-average` | SO2 average across all Rustavi stations |
+| `GET` | `/api/air-quality/rustavi/co-average` | CO average across all Rustavi stations |
+| `GET` | `/api/air-quality/rustavi/all-pollutants-average` | All pollutants comprehensive analysis |
+
 ### Navigation & Discovery Endpoints
 
 | Method | Endpoint | Description |
@@ -217,6 +229,9 @@ pcaxis-server/
 - **2 Batumi Monitoring Stations**:
   - **BTUM** - ტ.აბუსერიძის ქუჩა (T.Abuseridze St)
   - **ORN03** - ბათუმის ცენტრალური პარკი (Batumi Central Park)
+- **2 Rustavi Monitoring Stations**:
+  - **RST18** - ბათუმის ქ. (Batumi St) *Currently Active*
+  - **ORN02** - მეგობრობის გამზ. (Megobroba Ave) *Status Variable*
 - **6 Major Pollutants**: PM10, PM2.5, NO2, O3, SO2, CO
 - **Quality Classifications**: Good, Fair, Moderate, Poor, Very Poor (WHO/EU standards)
 - **Data Freshness**: Near real-time (typically 30-60 minutes old)

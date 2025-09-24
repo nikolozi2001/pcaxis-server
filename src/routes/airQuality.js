@@ -186,4 +186,53 @@ router.get('/batumi/co-average', airQualityController.getBatumiCOAverage);
  */
 router.get('/batumi/all-pollutants-average', airQualityController.getBatumiAllPollutantsAverage);
 
+/**
+ * @route GET /api/air-quality/rustavi/pm25-average
+ * @desc Get PM2.5 average for all Rustavi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/rustavi/pm25-average', airQualityController.getRustaviPM25Average);
+
+/**
+ * @route GET /api/air-quality/rustavi/pm10-average
+ * @desc Get PM10 average for all Rustavi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/rustavi/pm10-average', airQualityController.getRustaviPM10Average);
+
+/**
+ * @route GET /api/air-quality/rustavi/no2-average
+ * @desc Get NO2 average for all Rustavi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/rustavi/no2-average', airQualityController.getRustaviNO2Average);
+
+/**
+ * @route GET /api/air-quality/rustavi/o3-average
+ * @desc Get O3 average for all Rustavi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/rustavi/o3-average', airQualityController.getRustaviO3Average);
+
+/**
+ * @route GET /api/air-quality/rustavi/so2-average
+ * @desc Get SO2 average for all Rustavi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/rustavi/so2-average', airQualityController.getRustaviSO2Average);
+
+/**
+ * @route GET /api/air-quality/rustavi/co-average
+ * @desc Get CO average for all Rustavi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/rustavi/co-average', airQualityController.getRustaviCOAverage);
+
+/**
+ * @route GET /api/air-quality/rustavi/all-pollutants-average
+ * @desc Get averages for all pollutants from all Rustavi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/rustavi/all-pollutants-average', airQualityController.getRustaviAllPollutantsAverage);
+
 export default router;

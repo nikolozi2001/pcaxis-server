@@ -1172,6 +1172,249 @@ export class AirQualityService {
       }
     };
   }
+
+  /**
+   * Generic method to calculate pollutant average for Rustavi stations
+   * @param {string} substance - The pollutant substance (e.g., 'PM2.5', 'PM10', etc.)
+   * @param {Object} options - Query options
+   * @returns {Object} Average pollutant data with station breakdown
+   */
+  async getRustaviPollutantAverage(substance, options = {}) {
+    const { hoursBack = 6 } = options;
+    
+    console.log(`🔍 Calculating Rustavi ${substance} average...`);
+    
+    try {
+      // Get all data for the time period
+      const allData = await this.getLatestData({
+        stationCode: 'all',
+        hoursBack
+      });
+
+      // Filter for Rustavi stations (using Georgian text - must start with ქ.რუსთავი)
+      const rustaviStations = allData.stations.filter(station => 
+        station.settlement.startsWith('ქ.რუსთავი')
+      );
+
+      console.log(`📍 Found ${rustaviStations.length} Rustavi stations`);
+
+      if (rustaviStations.length === 0) {
+        throw new Error(`No Rustavi monitoring stations found`);
+      }
+
+      // Extract pollutant data from each station
+      const stationData = [];
+      let totalValue = 0;
+      let stationsWithData = 0;
+      let oldestDataAgeMinutes = 0;
+      let unit = '';
+
+      for (const station of rustaviStations) {
+        // Find the specific substance data
+        const substanceData = station.substances?.find(s => 
+          s.name === substance || s.name === substance.replace('.', '.')
+        );
+
+        if (substanceData && substanceData.latestValue !== null && substanceData.latestValue !== undefined) {
+          const value = parseFloat(substanceData.latestValue);
+          
+          if (!isNaN(value)) {
+            totalValue += value;
+            stationsWithData++;
+            unit = substanceData.unit || 'μg/m³';
+            
+            // Calculate data age
+            const dataAge = this.calculateDataAge(substanceData.latestTimestamp);
+            oldestDataAgeMinutes = Math.max(oldestDataAgeMinutes, dataAge.ageMinutes);
+            
+            console.log(`   ✅ ${station.code}: ${value.toFixed(2)} ${unit}`);
+            
+            stationData.push({
+              code: station.code,
+              settlement: station.settlement,
+              address: station.address,
+              pollutantValue: value,
+              timestamp: substanceData.latestTimestamp,
+              dataAge,
+              qualityLevel: this.determineQualityLevel(substance, value)
+            });
+          } else {
+            console.log(`   ❌ ${station.code}: Invalid ${substance} data`);
+            stationData.push({
+              code: station.code,
+              settlement: station.settlement,
+              address: station.address,
+              pollutantValue: null,
+              timestamp: null,
+              dataAge: null,
+              qualityLevel: 'no_data'
+            });
+          }
+        } else {
+          console.log(`   ❌ ${station.code}: No ${substance} data available`);
+          stationData.push({
+            code: station.code,
+            settlement: station.settlement,
+            address: station.address,
+            pollutantValue: null,
+            timestamp: null,
+            dataAge: null,
+            qualityLevel: 'no_data'
+          });
+        }
+      }
+
+      if (stationsWithData === 0) {
+        throw new Error(`No ${substance} data available from any Rustavi station`);
+      }
+
+      // Calculate average
+      const averageValue = totalValue / stationsWithData;
+      const qualityLevel = this.determineQualityLevel(substance, averageValue);
+      
+      console.log(`📊 Average ${substance}: ${averageValue.toFixed(2)} ${unit} (${qualityLevel})`);
+      console.log(`📈 Based on ${stationsWithData}/${rustaviStations.length} stations with data`);
+
+      return {
+        success: true,
+        timestamp: new Date().toISOString(),
+        currentGeorgiaTime: new Date().toLocaleString('en-US', { 
+          timeZone: 'Asia/Tbilisi',
+          year: 'numeric',
+          month: 'short', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        city: 'Rustavi',
+        substance,
+        average: {
+          value: Math.round(averageValue * 100) / 100,
+          unit,
+          qualityLevel,
+          calculation: {
+            sum: Math.round(totalValue * 100) / 100,
+            stationsWithData,
+            totalStations: rustaviStations.length,
+            formula: `${totalValue.toFixed(2)} ÷ ${stationsWithData} = ${averageValue.toFixed(2)}`
+          }
+        },
+        stations: stationData,
+        dataFreshness: {
+          mostRecentTimestamp: new Date(Date.now() - oldestDataAgeMinutes * 60000).toISOString(),
+          oldestDataAgeMinutes,
+          note: oldestDataAgeMinutes > 120 ? 'Some station data may have processing delays' : null
+        },
+        requestOptions: {
+          hoursBack
+        }
+      };
+
+    } catch (error) {
+      console.error(`Error calculating Rustavi ${substance} average:`, error);
+      throw new Error(`Failed to calculate Rustavi ${substance} average: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get Rustavi PM10 average from all stations
+   * @param {Object} options - Query options
+   * @returns {Object} PM10 average data
+   */
+  async getRustaviPM10Average(options = {}) {
+    return this.getRustaviPollutantAverage('PM10', options);
+  }
+
+  /**
+   * Get Rustavi PM2.5 average from all stations
+   * @param {Object} options - Query options
+   * @returns {Object} PM2.5 average data
+   */
+  async getRustaviPM25Average(options = {}) {
+    return this.getRustaviPollutantAverage('PM2.5', options);
+  }
+
+  /**
+   * Get Rustavi NO2 average from all stations
+   * @param {Object} options - Query options
+   * @returns {Object} NO2 average data
+   */
+  async getRustaviNO2Average(options = {}) {
+    return this.getRustaviPollutantAverage('NO2', options);
+  }
+
+  /**
+   * Get Rustavi O3 average from all stations
+   * @param {Object} options - Query options
+   * @returns {Object} O3 average data
+   */
+  async getRustaviO3Average(options = {}) {
+    return this.getRustaviPollutantAverage('O3', options);
+  }
+
+  /**
+   * Get Rustavi SO2 average from all stations
+   * @param {Object} options - Query options
+   * @returns {Object} SO2 average data
+   */
+  async getRustaviSO2Average(options = {}) {
+    return this.getRustaviPollutantAverage('SO2', options);
+  }
+
+  /**
+   * Get Rustavi CO average from all stations
+   * @param {Object} options - Query options
+   * @returns {Object} CO average data
+   */
+  async getRustaviCOAverage(options = {}) {
+    return this.getRustaviPollutantAverage('CO', options);
+  }
+
+  /**
+   * Get comprehensive air quality report for all pollutants in Rustavi
+   * @param {Object} options - Query options
+   * @returns {Object} Comprehensive air quality data for all pollutants
+   */
+  async getRustaviAllPollutantsAverage(options = {}) {
+    console.log('🔍 Calculating all pollutants averages for Rustavi...');
+    
+    const pollutants = ['PM10', 'PM2.5', 'NO2', 'O3', 'SO2', 'CO'];
+    const results = {};
+    const errors = {};
+    let successfulCalculations = 0;
+
+    for (const pollutant of pollutants) {
+      try {
+        const result = await this.getRustaviPollutantAverage(pollutant, options);
+        results[pollutant] = result;
+        successfulCalculations++;
+      } catch (error) {
+        console.error(`⚠️ Failed to get ${pollutant} average:`, error.message);
+        errors[pollutant] = error.message;
+      }
+    }
+
+    return {
+      success: true,
+      timestamp: new Date().toISOString(),
+      currentGeorgiaTime: new Date().toLocaleString('en-US', { 
+        timeZone: 'Asia/Tbilisi',
+        year: 'numeric',
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      city: 'Rustavi',
+      pollutantAverages: results,
+      errors: Object.keys(errors).length > 0 ? errors : undefined,
+      summary: {
+        totalPollutants: pollutants.length,
+        successfulCalculations,
+        failedCalculations: pollutants.length - successfulCalculations
+      }
+    };
+  }
 }
 
 export default new AirQualityService();
