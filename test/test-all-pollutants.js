@@ -3,7 +3,7 @@
  * Tests the new functionality to calculate averages for PM10, NO2, O3, SO2, CO
  */
 
-import airQualityService from './src/services/airQualityService.js';
+import airQualityService from '../src/services/airQualityService.js';
 
 console.log('🧪 Testing All Pollutant Averages for Tbilisi');
 console.log('='.repeat(60));

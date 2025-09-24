@@ -2,7 +2,7 @@
  * Smart Data Retrieval - Finds the most recent available data
  */
 
-import airQualityService from './src/services/airQualityService.js';
+import airQualityService from '../src/services/airQualityService.js';
 
 async function findMostRecentData(stationCode = 'TSRT') {
   console.log(`🔍 Finding most recent data for station ${stationCode}...\n`);

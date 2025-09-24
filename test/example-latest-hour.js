@@ -3,7 +3,7 @@
  * This example demonstrates how to get the most recent air quality readings
  */
 
-import airQualityService from './src/services/airQualityService.js';
+import airQualityService from '../src/services/airQualityService.js';
 
 async function getLatestHourData() {
   try {

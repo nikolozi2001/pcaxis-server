@@ -2,7 +2,7 @@
  * Debug script to check current API data availability
  */
 
-import airQualityService from './src/services/airQualityService.js';
+import airQualityService from '../src/services/airQualityService.js';
 
 async function debugApiData() {
   try {

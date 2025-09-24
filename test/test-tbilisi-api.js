@@ -45,7 +45,7 @@ async function testDirectService() {
     console.log('🧪 Testing direct service call...\n');
     
     // Import and test the service directly
-    const { default: airQualityService } = await import('./src/services/airQualityService.js');
+    const { default: airQualityService } = await import('../src/services/airQualityService.js');
     
     const result = await airQualityService.getTbilisiPM25Average();
     

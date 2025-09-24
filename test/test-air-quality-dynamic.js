@@ -3,7 +3,7 @@
  * This script tests the dynamic air quality data fetching functionality
  */
 
-import airQualityService from './src/services/airQualityService.js';
+import airQualityService from '../src/services/airQualityService.js';
 
 async function testAirQualityService() {
   console.log('🧪 Testing Air Quality Service...\n');

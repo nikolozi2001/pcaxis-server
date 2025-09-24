@@ -3,7 +3,7 @@
  * This example demonstrates how to calculate the average PM2.5 for all Tbilisi stations
  */
 
-import airQualityService from './src/services/airQualityService.js';
+import airQualityService from '../src/services/airQualityService.js';
 
 async function getTbilisiPM25Average() {
   try {

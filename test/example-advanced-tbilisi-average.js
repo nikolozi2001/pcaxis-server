@@ -3,7 +3,7 @@
  * Shows different scenarios and use cases
  */
 
-import airQualityService from './src/services/airQualityService.js';
+import airQualityService from '../src/services/airQualityService.js';
 
 async function showDifferentScenarios() {
   console.log('📊 TBILISI PM2.5 AVERAGE - DIFFERENT SCENARIOS\n');

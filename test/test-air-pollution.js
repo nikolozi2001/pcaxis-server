@@ -3,7 +3,7 @@
  * Tests all new air pollution datasets added to the configuration
  */
 
-import { DATASETS } from './src/config/datasets.js';
+import { DATASETS } from '../src/config/datasets.js';
 
 const BASE_URL = 'http://localhost:3000/api';
 const PXWEB_BASE_URL = 'https://pc-axis.geostat.ge/PXWeb/api/v1/ka/Database';

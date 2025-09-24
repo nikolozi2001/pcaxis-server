@@ -2,7 +2,7 @@
  * Real-time check for all stations to see data availability
  */
 
-import airQualityService from './src/services/airQualityService.js';
+import airQualityService from '../src/services/airQualityService.js';
 
 async function checkAllStationsDataFreshness() {
   console.log('🔍 Checking data freshness across ALL monitoring stations...\n');
