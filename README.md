@@ -4,7 +4,16 @@ A modern Node.js API server for accessing Georgian statistical data from the PXW
 
 ## 🆕 Latest Updates
 
-### Air Pollution Data Integration ✨
+### 🌍 Real-Time Air Quality Monitoring System ✨
+- **Live Air Quality Data** - Real-time integration with air.gov.ge API for current air quality measurements
+- **Tbilisi City-Wide Averages** - Comprehensive pollutant averaging across all 4 Tbilisi monitoring stations
+- **Multi-Pollutant Support** - PM10, PM2.5, NO2, O3, SO2, CO monitoring and analysis
+- **Quality Level Assessment** - WHO/EU standard-based air quality classifications
+- **Smart Station Filtering** - Automatic Tbilisi station detection using Georgian text matching
+- **Data Freshness Tracking** - Real-time age calculation with Georgia timezone awareness
+- **Intelligent Data Handling** - Graceful handling of missing sensors and incomplete data
+
+### Air Pollution Data Integration 📊
 - **Real Air Pollution Datasets** - Added 4 authentic air pollution datasets from Georgian National Statistics
 - **Regional Coverage** - Air pollution data by Georgian regions and cities
 - **Transport Emissions** - Vehicle emission data by pollutant type
@@ -12,7 +21,16 @@ A modern Node.js API server for accessing Georgian statistical data from the PXW
 - **Georgian Language Support** - All dataset descriptions in Georgian
 - **Dataset-specific Processing** - Custom data filtering for enhanced usability
 
-### New Air Pollution Endpoints 🌬️
+### New Real-Time Air Quality Endpoints 🌬️
+- `GET /api/air-quality/tbilisi/pm10-average` - PM10 city-wide average
+- `GET /api/air-quality/tbilisi/pm25-average` - PM2.5 city-wide average
+- `GET /api/air-quality/tbilisi/no2-average` - NO2 city-wide average
+- `GET /api/air-quality/tbilisi/o3-average` - O3 city-wide average
+- `GET /api/air-quality/tbilisi/so2-average` - SO2 city-wide average
+- `GET /api/air-quality/tbilisi/co-average` - CO city-wide average
+- `GET /api/air-quality/tbilisi/all-pollutants-average` - Comprehensive multi-pollutant analysis
+
+### Historical Air Pollution Endpoints 📈
 - `air-pollution-regions` - ატმოსფერული ჰაერის დაბინძურება
 - `air-pollution-cities` - ცალკეულ ქალაქებში მავნე ნივთიერებები
 - `transport-emissions` - ავტოტრანსპორტის ემისიები
@@ -41,18 +59,25 @@ pcaxis-server/
 │   │   ├── index.js      # Main configuration
 │   │   └── datasets.js   # Dataset definitions
 │   ├── controllers/      # Request handlers
+│   │   ├── airQualityController.js    # Real-time air quality endpoints
 │   │   ├── datasetController.js
 │   │   ├── healthController.js
-│   │   └── navigationController.js
+│   │   ├── lakesController.js
+│   │   ├── navigationController.js
+│   │   └── riversController.js
 │   ├── services/         # Business logic
-│   │   ├── pxwebService.js
+│   │   ├── airQualityService.js       # Air quality data processing
 │   │   ├── dataProcessingService.js
-│   │   └── pxwebNavigationService.js
+│   │   ├── pxwebNavigationService.js
+│   │   └── pxwebService.js
 │   ├── routes/           # Route definitions
-│   │   ├── index.js
+│   │   ├── airQuality.js             # Real-time air quality routes
 │   │   ├── datasets.js
 │   │   ├── health.js
-│   │   └── navigation.js
+│   │   ├── index.js
+│   │   ├── lakes.js
+│   │   ├── navigation.js
+│   │   └── rivers.js
 │   ├── middleware/       # Custom middleware
 │   │   ├── errorHandler.js
 │   │   └── requestLogger.js
@@ -60,8 +85,11 @@ pcaxis-server/
 │   │   └── helpers.js
 │   └── app.js            # Express application setup
 ├── index.js              # Server entry point
+├── server.js             # Alternative server entry point
 ├── test-env-datasets.js  # Test script for environmental datasets
-├── test-air-pollution.js # Test script for air pollution datasets
+├── test-air-pollution.js # Test script for historical air pollution datasets
+├── test-all-pollutants.js # Test script for real-time air quality system
+├── example-pollutant-usage.js # API usage examples
 ├── package.json
 └── README.md
 ```
@@ -120,6 +148,27 @@ pcaxis-server/
 | `GET` | `/api/datasets/:id/data` | Get processed chart-ready data |
 | `GET` | `/api/datasets/:id/jsonstat` | Get raw JSON-Stat data |
 
+### Real-Time Air Quality Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/air-quality/latest` | Get latest air quality data from all stations |
+| `GET` | `/api/air-quality/stations` | List all available monitoring stations |
+| `GET` | `/api/air-quality/pollutant/:pollutant` | Get specific pollutant data |
+| `GET` | `/api/air-quality/summary` | Air quality summary with latest readings |
+
+### Tbilisi City-Wide Averages
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/air-quality/tbilisi/pm10-average` | PM10 average across all Tbilisi stations |
+| `GET` | `/api/air-quality/tbilisi/pm25-average` | PM2.5 average across all Tbilisi stations |
+| `GET` | `/api/air-quality/tbilisi/no2-average` | NO2 average across all Tbilisi stations |
+| `GET` | `/api/air-quality/tbilisi/o3-average` | O3 average across all Tbilisi stations |
+| `GET` | `/api/air-quality/tbilisi/so2-average` | SO2 average across all Tbilisi stations |
+| `GET` | `/api/air-quality/tbilisi/co-average` | CO average across all Tbilisi stations |
+| `GET` | `/api/air-quality/tbilisi/all-pollutants-average` | All pollutants comprehensive analysis |
+
 ### Navigation & Discovery Endpoints
 
 | Method | Endpoint | Description |
@@ -131,7 +180,18 @@ pcaxis-server/
 
 ## 📊 Available Data Categories
 
-### 🌱 Environmental Statistics (environment)
+### � Real-Time Air Quality Monitoring
+- **Live Data Integration** - Direct connection to air.gov.ge API
+- **4 Tbilisi Monitoring Stations**:
+  - **TSRT** - წერეთლის გამზ. (Tsereteli Ave)
+  - **KZBG** - ყაზბეგის გამზ. (Kazbegi Ave) 
+  - **AGMS** - აღმაშენებლის გამზ. (Aghmashenebeli Ave)
+  - **ORN01** - მარშალ გელოვანის გამზირი (Marshal Gelovani Ave)
+- **6 Major Pollutants**: PM10, PM2.5, NO2, O3, SO2, CO
+- **Quality Classifications**: Good, Fair, Moderate, Poor, Very Poor (WHO/EU standards)
+- **Data Freshness**: Near real-time (typically 30-60 minutes old)
+
+### �🌱 Environmental Statistics (environment)
 - **🌬️ Air Pollution** (ატმოსფერული ჰაერის დაბინძურება)
 - **💰 Environmental-Economic Accounts** (გარემოსდაცვითი ეკონომიკური ანგარიშები)
 - **📈 Environmental Indicators** (გარემოსდაცვითი ინდიკატორები)
@@ -172,13 +232,52 @@ pcaxis-server/
 
 ## 📝 Example Requests
 
+### Real-Time Air Quality Operations
+```bash
+# Get latest air quality data from all stations
+curl http://localhost:3000/api/air-quality/latest
+
+# Get all available monitoring stations
+curl http://localhost:3000/api/air-quality/stations
+
+# Get specific pollutant data (PM2.5 from TSRT station)
+curl "http://localhost:3000/api/air-quality/pollutant/PM2.5?station=TSRT&hours=24"
+
+# Get air quality summary for a station
+curl "http://localhost:3000/api/air-quality/summary?station=KZBG"
+```
+
+### Tbilisi City-Wide Air Quality Averages
+```bash
+# Get PM2.5 average across all Tbilisi stations
+curl "http://localhost:3000/api/air-quality/tbilisi/pm25-average?hours=6"
+
+# Get PM10 average across all Tbilisi stations
+curl http://localhost:3000/api/air-quality/tbilisi/pm10-average
+
+# Get NO2 average (with custom time range)
+curl "http://localhost:3000/api/air-quality/tbilisi/no2-average?hours=12"
+
+# Get O3 average
+curl http://localhost:3000/api/air-quality/tbilisi/o3-average
+
+# Get SO2 average
+curl http://localhost:3000/api/air-quality/tbilisi/so2-average
+
+# Get CO average
+curl http://localhost:3000/api/air-quality/tbilisi/co-average
+
+# Get comprehensive analysis of all pollutants
+curl http://localhost:3000/api/air-quality/tbilisi/all-pollutants-average
+
+# From another PC on the network
+curl http://192.168.1.27:3000/api/air-quality/tbilisi/all-pollutants-average
+```
+
 ### Basic Dataset Operations
 ```bash
 # Get all datasets
 curl http://localhost:3000/api/datasets
-
-# Get environmental datasets only
-curl "http://localhost:3000/api/datasets?category=environment"
 
 # Get environmental datasets only
 curl "http://localhost:3000/api/datasets?category=environment"
@@ -267,6 +366,115 @@ All API responses follow a consistent format:
 }
 ```
 
+## 🌍 Air Quality Monitoring System
+
+### Current Tbilisi Air Quality Status
+
+**Live Monitoring Data** (Updated every hour from air.gov.ge):
+
+| Pollutant | Current Average | Unit | Quality Level | Active Stations |
+|-----------|----------------|------|--------------|-----------------|
+| PM10      | 21.45          | μg/m³| Fair         | 4/4            |
+| PM2.5     | 9.22           | μg/m³| Good         | 4/4            |
+| NO2       | 17.97          | μg/m³| Good         | 2/4            |
+| O3        | 43.13          | μg/m³| Good         | 3/4            |
+| SO2       | 6.30           | μg/m³| Good         | 3/4            |
+| CO        | 0.26           | μg/m³| Good         | 2/4            |
+
+**Overall Assessment**: 🟢 **Good** (5 of 6 pollutants in good-fair range)
+
+### Quality Level Thresholds (WHO/EU Standards)
+
+#### PM10 (Particulate Matter 10μm)
+- 🟢 **Good**: < 20 μg/m³
+- 🟡 **Fair**: 20-35 μg/m³
+- 🟠 **Moderate**: 35-50 μg/m³
+- 🔴 **Poor**: 50-100 μg/m³
+- ⚫ **Very Poor**: > 100 μg/m³
+
+#### PM2.5 (Fine Particulate Matter)
+- 🟢 **Good**: < 12 μg/m³
+- 🟡 **Fair**: 12-25 μg/m³
+- 🟠 **Moderate**: 25-35 μg/m³
+- 🔴 **Poor**: 35-60 μg/m³
+- ⚫ **Very Poor**: > 60 μg/m³
+
+#### NO2 (Nitrogen Dioxide)
+- 🟢 **Good**: < 40 μg/m³
+- 🟡 **Fair**: 40-70 μg/m³
+- 🟠 **Moderate**: 70-150 μg/m³
+- 🔴 **Poor**: 150-200 μg/m³
+- ⚫ **Very Poor**: > 200 μg/m³
+
+#### O3 (Ozone)
+- 🟢 **Good**: < 60 μg/m³
+- 🟡 **Fair**: 60-120 μg/m³
+- 🟠 **Moderate**: 120-180 μg/m³
+- 🔴 **Poor**: 180-240 μg/m³
+- ⚫ **Very Poor**: > 240 μg/m³
+
+#### SO2 (Sulfur Dioxide)
+- 🟢 **Good**: < 20 μg/m³
+- 🟡 **Fair**: 20-80 μg/m³
+- 🟠 **Moderate**: 80-250 μg/m³
+- 🔴 **Poor**: 250-350 μg/m³
+- ⚫ **Very Poor**: > 350 μg/m³
+
+#### CO (Carbon Monoxide)
+- 🟢 **Good**: < 4000 μg/m³
+- 🟡 **Fair**: 4000-8000 μg/m³
+- 🟠 **Moderate**: 8000-15000 μg/m³
+- 🔴 **Poor**: 15000-30000 μg/m³
+- ⚫ **Very Poor**: > 30000 μg/m³
+
+### Smart Averaging Features
+
+- **Intelligent Station Filtering**: Automatically identifies Tbilisi stations using Georgian text matching
+- **Data Availability Handling**: Gracefully handles missing sensors and incomplete data
+- **Smart Division Logic**: Only includes stations with actual data in calculations
+- **Data Freshness Tracking**: Real-time age calculation with Georgia timezone awareness
+- **Quality Assessment**: Pollutant-specific WHO/EU standard classifications
+- **Transparent Calculations**: Detailed breakdown of averages and data sources
+
+### API Response Format (Air Quality)
+
+```json
+{
+  "success": true,
+  "data": {
+    "timestamp": "2025-09-24T10:50:00.000Z",
+    "currentGeorgiaTime": "Sep 24, 2025, 02:50 PM",
+    "city": "Tbilisi",
+    "substance": "PM2.5",
+    "average": {
+      "value": 9.22,
+      "unit": "μg/m³",
+      "qualityLevel": "good",
+      "calculation": {
+        "sum": 36.89,
+        "stationsWithData": 4,
+        "totalStations": 4,
+        "formula": "36.89 ÷ 4 = 9.22"
+      }
+    },
+    "stations": [
+      {
+        "code": "TSRT",
+        "settlement": "ქ.თბილისი - წერეთლის გამზ.",
+        "address": "№105",
+        "pollutantValue": 11.73,
+        "timestamp": "2025-09-24T14:00:00",
+        "qualityLevel": "fair"
+      }
+    ],
+    "dataFreshness": {
+      "oldestDataAgeMinutes": 50,
+      "note": null
+    }
+  }
+}
+```
+
 ## ⚙️ Dataset-specific Processing
 
 Some datasets have custom processing logic to enhance data usability and focus on specific use cases:
@@ -327,8 +535,14 @@ The server can be configured via environment variables:
 # Run the environmental datasets test
 node test-env-datasets.js
 
-# Test air pollution datasets specifically
+# Test historical air pollution datasets specifically
 node test-air-pollution.js
+
+# Test real-time air quality system (comprehensive)
+node test-all-pollutants.js
+
+# Test API usage examples
+node example-pollutant-usage.js
 ```
 
 ### Adding New Datasets
@@ -438,5 +652,22 @@ For support or questions:
 ## 🔗 Related Resources
 
 - **Georgian National Statistics Office:** [geostat.ge](https://www.geostat.ge)
+- **Georgian Air Quality Monitoring:** [air.gov.ge](https://air.gov.ge) - Real-time air quality data source
 - **PXWeb Documentation:** [Official PXWeb docs](https://www.scb.se/en/services/statistical-programs-for-px-files/px-web/)
 - **JSON-Stat Toolkit:** [jsonstat.org](https://json-stat.org/)
+- **WHO Air Quality Guidelines:** [WHO AQG](https://www.who.int/news-room/feature-stories/detail/what-are-the-who-air-quality-guidelines)
+
+## 📊 Data Sources
+
+### Real-Time Air Quality Data
+- **Source**: air.gov.ge (Georgian Government Air Quality Monitoring System)
+- **Update Frequency**: Hourly measurements
+- **Geographic Coverage**: 14 stations across Georgia (4 in Tbilisi)
+- **Data Freshness**: Typically 30-60 minutes old (near real-time)
+- **Quality Standards**: WHO/EU air quality guidelines
+
+### Historical Environmental Data
+- **Source**: Georgian National Statistics Office (geostat.ge)
+- **Data Range**: Various periods (2005-2021 for most datasets)
+- **Format**: PX-Axis statistical format via PXWeb API
+- **Languages**: Georgian and English metadata support
