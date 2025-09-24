@@ -1191,10 +1191,14 @@ export class AirQualityService {
         hoursBack
       });
 
-      // Filter for Rustavi stations (using Georgian text - must start with ქ.რუსთავი)
-      const rustaviStations = allData.stations.filter(station => 
-        station.settlement.startsWith('ქ.რუსთავი')
-      );
+      // Filter for Rustavi stations (using Georgian text - starts with ქ.რუსთავი)
+      // Handle both formats: "ქ.რუსთავი - " and "ქ.რუსთავი-"
+      // Also handle BOM and other invisible characters by trimming
+      const rustaviStations = allData.stations.filter(station => {
+        const cleanSettlement = station.settlement.replace(/^\ufeff/, '').trim();
+        return cleanSettlement.startsWith('ქ.რუსთავი-') || 
+               cleanSettlement.startsWith('ქ.რუსთავი ');
+      });
 
       console.log(`📍 Found ${rustaviStations.length} Rustavi stations`);
 
