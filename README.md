@@ -169,6 +169,18 @@ pcaxis-server/
 | `GET` | `/api/air-quality/tbilisi/co-average` | CO average across all Tbilisi stations |
 | `GET` | `/api/air-quality/tbilisi/all-pollutants-average` | All pollutants comprehensive analysis |
 
+### Kutaisi City-Wide Averages
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/air-quality/kutaisi/pm10-average` | PM10 average across all Kutaisi stations |
+| `GET` | `/api/air-quality/kutaisi/pm25-average` | PM2.5 average across all Kutaisi stations |
+| `GET` | `/api/air-quality/kutaisi/no2-average` | NO2 average across all Kutaisi stations |
+| `GET` | `/api/air-quality/kutaisi/o3-average` | O3 average across all Kutaisi stations |
+| `GET` | `/api/air-quality/kutaisi/so2-average` | SO2 average across all Kutaisi stations |
+| `GET` | `/api/air-quality/kutaisi/co-average` | CO average across all Kutaisi stations |
+| `GET` | `/api/air-quality/kutaisi/all-pollutants-average` | All pollutants comprehensive analysis |
+
 ### Navigation & Discovery Endpoints
 
 | Method | Endpoint | Description |
@@ -187,6 +199,9 @@ pcaxis-server/
   - **KZBG** - ყაზბეგის გამზ. (Kazbegi Ave) 
   - **AGMS** - აღმაშენებლის გამზ. (Aghmashenebeli Ave)
   - **ORN01** - მარშალ გელოვანის გამზირი (Marshal Gelovani Ave)
+- **2 Kutaisi Monitoring Stations**:
+  - **KUTS** - ლადო ასათიანის ქ. (Lado Asatiani St)
+  - **ORN04** - ნინოშვილის ქუჩისა და დ.აღმაშენებლის გამზ. (Ninoshvili St & D.Aghmashenebeli Ave)
 - **6 Major Pollutants**: PM10, PM2.5, NO2, O3, SO2, CO
 - **Quality Classifications**: Good, Fair, Moderate, Poor, Very Poor (WHO/EU standards)
 - **Data Freshness**: Near real-time (typically 30-60 minutes old)

@@ -688,6 +688,247 @@ export class AirQualityService {
       throw new Error(`Failed to calculate all pollutants averages: ${error.message}`);
     }
   }
+
+  /**
+   * Generic method to calculate average for any pollutant for Kutaisi stations
+   * @param {string} pollutant - Pollutant name (PM10, PM2.5, NO2, O3, SO2, CO)
+   * @param {Object} options - Options for the calculation
+   * @returns {Promise<Object>} Average pollutant data for Kutaisi
+   */
+  async getKutaisiPollutantAverage(pollutant, options = {}) {
+    try {
+      console.log(`🔍 Calculating Kutaisi ${pollutant} average...`);
+      
+      // Validate pollutant
+      const validPollutants = ['PM10', 'PM2.5', 'NO2', 'O3', 'SO2', 'CO'];
+      if (!validPollutants.includes(pollutant.toUpperCase())) {
+        throw new Error(`Invalid pollutant: ${pollutant}. Must be one of: ${validPollutants.join(', ')}`);
+      }
+
+      const pollutantName = pollutant.toUpperCase();
+      
+      // Get data from all stations
+      const allData = await this.getLatestData({
+        stationCode: 'all',
+        hoursBack: options.hoursBack || 6
+      });
+
+      // Filter Kutaisi stations (stations that have "ქუთაისი" in their settlement name)
+      const kutaisiStations = allData.stations.filter(station => 
+        station.settlement.includes('ქუთაისი')
+      );
+
+      console.log(`📍 Found ${kutaisiStations.length} Kutaisi stations`);
+
+      // Extract pollutant data from each station
+      const pollutantData = [];
+      const stationDetails = [];
+
+      kutaisiStations.forEach(station => {
+        const substance = station.substances.find(s => s.name === pollutantName);
+        
+        if (substance && substance.latestValue !== null && substance.latestValue !== undefined) {
+          pollutantData.push(substance.latestValue);
+          stationDetails.push({
+            code: station.code,
+            settlement: station.settlement,
+            address: station.address,
+            pollutantValue: substance.latestValue,
+            timestamp: substance.latestTimestamp,
+            dataAge: substance.dataAge,
+            qualityLevel: substance.qualityLevel
+          });
+          console.log(`   ✅ ${station.code}: ${substance.latestValue.toFixed(2)} ${substance.unit_en || 'μg/m³'}`);
+        } else {
+          console.log(`   ❌ ${station.code}: No ${pollutantName} data available`);
+          stationDetails.push({
+            code: station.code,
+            settlement: station.settlement,
+            address: station.address,
+            pollutantValue: null,
+            timestamp: null,
+            dataAge: null,
+            qualityLevel: 'no_data'
+          });
+        }
+      });
+
+      if (pollutantData.length === 0) {
+        throw new Error(`No ${pollutantName} data available from any Kutaisi station`);
+      }
+
+      // Calculate average
+      const sum = pollutantData.reduce((acc, value) => acc + value, 0);
+      const average = sum / pollutantData.length;
+      const stationsWithData = pollutantData.length;
+      const totalStations = kutaisiStations.length;
+
+      // Determine overall quality level based on average and pollutant type
+      let averageQualityLevel = this.determineQualityLevel(pollutantName, average);
+
+      // Find the most recent timestamp among all stations
+      let mostRecentTimestamp = null;
+      let oldestDataAgeMinutes = 0;
+      
+      stationDetails.forEach(station => {
+        if (station.timestamp && station.dataAge) {
+          const stationTime = new Date(station.timestamp);
+          if (!mostRecentTimestamp || stationTime > mostRecentTimestamp) {
+            mostRecentTimestamp = stationTime;
+          }
+          if (station.dataAge.ageMinutes > oldestDataAgeMinutes) {
+            oldestDataAgeMinutes = station.dataAge.ageMinutes;
+          }
+        }
+      });
+
+      console.log(`📊 Average ${pollutantName}: ${average.toFixed(2)} μg/m³ (${averageQualityLevel})`);
+      console.log(`📈 Based on ${stationsWithData}/${totalStations} stations with data`);
+
+      return {
+        success: true,
+        timestamp: new Date().toISOString(),
+        currentGeorgiaTime: this.getCurrentGeorgiaTime().toLocaleString('en-US', {
+          timeZone: 'Asia/Tbilisi',
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }),
+        city: 'Kutaisi',
+        substance: pollutantName,
+        average: {
+          value: parseFloat(average.toFixed(2)),
+          unit: 'μg/m³',
+          qualityLevel: averageQualityLevel,
+          calculation: {
+            sum: parseFloat(sum.toFixed(2)),
+            stationsWithData: stationsWithData,
+            totalStations: totalStations,
+            formula: `${sum.toFixed(2)} ÷ ${stationsWithData} = ${average.toFixed(2)}`
+          }
+        },
+        stations: stationDetails,
+        dataFreshness: {
+          mostRecentTimestamp: mostRecentTimestamp?.toISOString(),
+          oldestDataAgeMinutes: oldestDataAgeMinutes,
+          note: oldestDataAgeMinutes > 60 ? 'Some station data may have processing delays' : null
+        },
+        requestOptions: options
+      };
+
+    } catch (error) {
+      console.error(`Error calculating Kutaisi ${pollutant} average:`, error);
+      throw new Error(`Failed to calculate Kutaisi ${pollutant} average: ${error.message}`);
+    }
+  }
+
+  /**
+   * Calculate average PM2.5 for Kutaisi stations
+   * @param {Object} options - Options for the calculation
+   * @returns {Promise<Object>} Average PM2.5 data for Kutaisi
+   */
+  async getKutaisiPM25Average(options = {}) {
+    return this.getKutaisiPollutantAverage('PM2.5', options);
+  }
+
+  /**
+   * Calculate average PM10 for Kutaisi stations
+   * @param {Object} options - Options for the calculation
+   * @returns {Promise<Object>} Average PM10 data for Kutaisi
+   */
+  async getKutaisiPM10Average(options = {}) {
+    return this.getKutaisiPollutantAverage('PM10', options);
+  }
+
+  /**
+   * Calculate average NO2 for Kutaisi stations
+   * @param {Object} options - Options for the calculation
+   * @returns {Promise<Object>} Average NO2 data for Kutaisi
+   */
+  async getKutaisiNO2Average(options = {}) {
+    return this.getKutaisiPollutantAverage('NO2', options);
+  }
+
+  /**
+   * Calculate average O3 for Kutaisi stations
+   * @param {Object} options - Options for the calculation
+   * @returns {Promise<Object>} Average O3 data for Kutaisi
+   */
+  async getKutaisiO3Average(options = {}) {
+    return this.getKutaisiPollutantAverage('O3', options);
+  }
+
+  /**
+   * Calculate average SO2 for Kutaisi stations
+   * @param {Object} options - Options for the calculation
+   * @returns {Promise<Object>} Average SO2 data for Kutaisi
+   */
+  async getKutaisiSO2Average(options = {}) {
+    return this.getKutaisiPollutantAverage('SO2', options);
+  }
+
+  /**
+   * Calculate average CO for Kutaisi stations
+   * @param {Object} options - Options for the calculation
+   * @returns {Promise<Object>} Average CO data for Kutaisi
+   */
+  async getKutaisiCOAverage(options = {}) {
+    return this.getKutaisiPollutantAverage('CO', options);
+  }
+
+  /**
+   * Get all pollutant averages for Kutaisi
+   * @param {Object} options - Options for the calculation
+   * @returns {Promise<Object>} All pollutant averages for Kutaisi
+   */
+  async getKutaisiAllPollutantsAverage(options = {}) {
+    try {
+      console.log('🔍 Calculating all pollutants averages for Kutaisi...');
+      
+      const pollutants = ['PM10', 'PM2.5', 'NO2', 'O3', 'SO2', 'CO'];
+      const results = {};
+      const errors = {};
+
+      for (const pollutant of pollutants) {
+        try {
+          const result = await this.getKutaisiPollutantAverage(pollutant, options);
+          results[pollutant] = result;
+        } catch (error) {
+          console.log(`⚠️ Failed to get ${pollutant} average: ${error.message}`);
+          errors[pollutant] = error.message;
+        }
+      }
+
+      return {
+        success: true,
+        timestamp: new Date().toISOString(),
+        currentGeorgiaTime: this.getCurrentGeorgiaTime().toLocaleString('en-US', {
+          timeZone: 'Asia/Tbilisi',
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }),
+        city: 'Kutaisi',
+        pollutantAverages: results,
+        errors: Object.keys(errors).length > 0 ? errors : undefined,
+        summary: {
+          totalPollutants: pollutants.length,
+          successfulCalculations: Object.keys(results).length,
+          failedCalculations: Object.keys(errors).length
+        }
+      };
+
+    } catch (error) {
+      console.error('Error calculating all pollutants averages:', error);
+      throw new Error(`Failed to calculate all pollutants averages: ${error.message}`);
+    }
+  }
 }
 
 export default new AirQualityService();

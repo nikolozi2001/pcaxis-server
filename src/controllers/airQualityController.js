@@ -408,6 +408,237 @@ export class AirQualityController {
       });
     }
   }
+
+  /**
+   * Get Kutaisi PM2.5 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getKutaisiPM25Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getKutaisiPM25Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Kutaisi',
+          substance: 'PM2.5',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Kutaisi PM2.5 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Kutaisi PM10 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getKutaisiPM10Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getKutaisiPM10Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Kutaisi',
+          substance: 'PM10',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Kutaisi PM10 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Kutaisi NO2 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getKutaisiNO2Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getKutaisiNO2Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Kutaisi',
+          substance: 'NO2',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Kutaisi NO2 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Kutaisi O3 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getKutaisiO3Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getKutaisiO3Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Kutaisi',
+          substance: 'O3',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Kutaisi O3 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Kutaisi SO2 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getKutaisiSO2Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getKutaisiSO2Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Kutaisi',
+          substance: 'SO2',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Kutaisi SO2 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Kutaisi CO average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getKutaisiCOAverage(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getKutaisiCOAverage(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Kutaisi',
+          substance: 'CO',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Kutaisi CO average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get all pollutant averages for Kutaisi from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getKutaisiAllPollutantsAverage(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getKutaisiAllPollutantsAverage(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Kutaisi',
+          substances: 'All pollutants',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Kutaisi all pollutants average',
+        message: error.message
+      });
+    }
+  }
 }
 
 export default new AirQualityController();

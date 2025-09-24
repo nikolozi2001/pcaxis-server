@@ -88,4 +88,53 @@ router.get('/tbilisi/co-average', airQualityController.getTbilisiCOAverage);
  */
 router.get('/tbilisi/all-pollutants-average', airQualityController.getTbilisiAllPollutantsAverage);
 
+/**
+ * @route GET /api/air-quality/kutaisi/pm25-average
+ * @desc Get PM2.5 average for all Kutaisi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/kutaisi/pm25-average', airQualityController.getKutaisiPM25Average);
+
+/**
+ * @route GET /api/air-quality/kutaisi/pm10-average
+ * @desc Get PM10 average for all Kutaisi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/kutaisi/pm10-average', airQualityController.getKutaisiPM10Average);
+
+/**
+ * @route GET /api/air-quality/kutaisi/no2-average
+ * @desc Get NO2 average for all Kutaisi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/kutaisi/no2-average', airQualityController.getKutaisiNO2Average);
+
+/**
+ * @route GET /api/air-quality/kutaisi/o3-average
+ * @desc Get O3 average for all Kutaisi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/kutaisi/o3-average', airQualityController.getKutaisiO3Average);
+
+/**
+ * @route GET /api/air-quality/kutaisi/so2-average
+ * @desc Get SO2 average for all Kutaisi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/kutaisi/so2-average', airQualityController.getKutaisiSO2Average);
+
+/**
+ * @route GET /api/air-quality/kutaisi/co-average
+ * @desc Get CO average for all Kutaisi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/kutaisi/co-average', airQualityController.getKutaisiCOAverage);
+
+/**
+ * @route GET /api/air-quality/kutaisi/all-pollutants-average
+ * @desc Get averages for all pollutants from all Kutaisi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/kutaisi/all-pollutants-average', airQualityController.getKutaisiAllPollutantsAverage);
+
 export default router;
