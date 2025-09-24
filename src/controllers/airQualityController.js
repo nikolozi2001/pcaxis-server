@@ -639,6 +639,237 @@ export class AirQualityController {
       });
     }
   }
+
+  /**
+   * Get Batumi PM2.5 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getBatumiPM25Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getBatumiPM25Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Batumi',
+          substance: 'PM2.5',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Batumi PM2.5 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Batumi PM10 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getBatumiPM10Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getBatumiPM10Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Batumi',
+          substance: 'PM10',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Batumi PM10 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Batumi NO2 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getBatumiNO2Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getBatumiNO2Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Batumi',
+          substance: 'NO2',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Batumi NO2 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Batumi O3 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getBatumiO3Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getBatumiO3Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Batumi',
+          substance: 'O3',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Batumi O3 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Batumi SO2 average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getBatumiSO2Average(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getBatumiSO2Average(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Batumi',
+          substance: 'SO2',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Batumi SO2 average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get Batumi CO average from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getBatumiCOAverage(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getBatumiCOAverage(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Batumi',
+          substance: 'CO',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Batumi CO average',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get all pollutant averages for Batumi from all stations
+   * @param {Request} req 
+   * @param {Response} res 
+   */
+  async getBatumiAllPollutantsAverage(req, res) {
+    try {
+      const { hours = 6 } = req.query; // Default to 6 hours back
+
+      const options = {
+        hoursBack: parseInt(hours, 10) || 6
+      };
+
+      const averageData = await airQualityService.getBatumiAllPollutantsAverage(options);
+
+      res.json({
+        success: true,
+        data: averageData,
+        request: {
+          city: 'Batumi',
+          substances: 'All pollutants',
+          hoursBack: options.hoursBack
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to calculate Batumi all pollutants average',
+        message: error.message
+      });
+    }
+  }
 }
 
 export default new AirQualityController();

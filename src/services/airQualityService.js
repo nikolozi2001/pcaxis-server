@@ -929,6 +929,249 @@ export class AirQualityService {
       throw new Error(`Failed to calculate all pollutants averages: ${error.message}`);
     }
   }
+
+  /**
+   * Generic method to calculate pollutant average for Batumi stations
+   * @param {string} substance - The pollutant substance (e.g., 'PM2.5', 'PM10', etc.)
+   * @param {Object} options - Query options
+   * @returns {Object} Average pollutant data with station breakdown
+   */
+  async getBatumiPollutantAverage(substance, options = {}) {
+    const { hoursBack = 6 } = options;
+    
+    console.log(`🔍 Calculating Batumi ${substance} average...`);
+    
+    try {
+      // Get all data for the time period
+      const allData = await this.getLatestData({
+        stationCode: 'all',
+        hoursBack
+      });
+
+      // Filter for Batumi stations (using Georgian text - must start with ქ.ბათუმი)
+      const batumiStations = allData.stations.filter(station => 
+        station.settlement.startsWith('ქ.ბათუმი')
+      );
+
+      console.log(`📍 Found ${batumiStations.length} Batumi stations`);
+
+      if (batumiStations.length === 0) {
+        throw new Error(`No Batumi monitoring stations found`);
+      }
+
+      // Extract pollutant data from each station
+      const stationData = [];
+      let totalValue = 0;
+      let stationsWithData = 0;
+      let oldestDataAgeMinutes = 0;
+      let unit = '';
+
+      for (const station of batumiStations) {
+        // Find the specific substance data
+        const substanceData = station.substances?.find(s => 
+          s.name === substance || s.name === substance.replace('.', '.')
+        );
+
+        if (substanceData && substanceData.latestValue !== null && substanceData.latestValue !== undefined) {
+          const value = parseFloat(substanceData.latestValue);
+          
+          if (!isNaN(value)) {
+            totalValue += value;
+            stationsWithData++;
+            unit = substanceData.unit || 'μg/m³';
+            
+            // Calculate data age
+            const dataAge = this.calculateDataAge(substanceData.latestTimestamp);
+            oldestDataAgeMinutes = Math.max(oldestDataAgeMinutes, dataAge.ageMinutes);
+            
+            console.log(`   ✅ ${station.code}: ${value.toFixed(2)} ${unit}`);
+            
+            stationData.push({
+              code: station.code,
+              settlement: station.settlement,
+              address: station.address,
+              pollutantValue: value,
+              timestamp: substanceData.latestTimestamp,
+              dataAge,
+              qualityLevel: this.determineQualityLevel(substance, value)
+            });
+          } else {
+            console.log(`   ❌ ${station.code}: Invalid ${substance} data`);
+            stationData.push({
+              code: station.code,
+              settlement: station.settlement,
+              address: station.address,
+              pollutantValue: null,
+              timestamp: null,
+              dataAge: null,
+              qualityLevel: 'no_data'
+            });
+          }
+        } else {
+          console.log(`   ❌ ${station.code}: No ${substance} data available`);
+          stationData.push({
+            code: station.code,
+            settlement: station.settlement,
+            address: station.address,
+            pollutantValue: null,
+            timestamp: null,
+            dataAge: null,
+            qualityLevel: 'no_data'
+          });
+        }
+      }
+
+      if (stationsWithData === 0) {
+        throw new Error(`No ${substance} data available from any Batumi station`);
+      }
+
+      // Calculate average
+      const averageValue = totalValue / stationsWithData;
+      const qualityLevel = this.determineQualityLevel(substance, averageValue);
+      
+      console.log(`📊 Average ${substance}: ${averageValue.toFixed(2)} ${unit} (${qualityLevel})`);
+      console.log(`📈 Based on ${stationsWithData}/${batumiStations.length} stations with data`);
+
+      return {
+        success: true,
+        timestamp: new Date().toISOString(),
+        currentGeorgiaTime: new Date().toLocaleString('en-US', { 
+          timeZone: 'Asia/Tbilisi',
+          year: 'numeric',
+          month: 'short', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        city: 'Batumi',
+        substance,
+        average: {
+          value: Math.round(averageValue * 100) / 100,
+          unit,
+          qualityLevel,
+          calculation: {
+            sum: Math.round(totalValue * 100) / 100,
+            stationsWithData,
+            totalStations: batumiStations.length,
+            formula: `${totalValue.toFixed(2)} ÷ ${stationsWithData} = ${averageValue.toFixed(2)}`
+          }
+        },
+        stations: stationData,
+        dataFreshness: {
+          mostRecentTimestamp: new Date(Date.now() - oldestDataAgeMinutes * 60000).toISOString(),
+          oldestDataAgeMinutes,
+          note: oldestDataAgeMinutes > 120 ? 'Some station data may have processing delays' : null
+        },
+        requestOptions: {
+          hoursBack
+        }
+      };
+
+    } catch (error) {
+      console.error(`Error calculating Batumi ${substance} average:`, error);
+      throw new Error(`Failed to calculate Batumi ${substance} average: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get Batumi PM10 average from all stations
+   * @param {Object} options - Query options
+   * @returns {Object} PM10 average data
+   */
+  async getBatumiPM10Average(options = {}) {
+    return this.getBatumiPollutantAverage('PM10', options);
+  }
+
+  /**
+   * Get Batumi PM2.5 average from all stations
+   * @param {Object} options - Query options
+   * @returns {Object} PM2.5 average data
+   */
+  async getBatumiPM25Average(options = {}) {
+    return this.getBatumiPollutantAverage('PM2.5', options);
+  }
+
+  /**
+   * Get Batumi NO2 average from all stations
+   * @param {Object} options - Query options
+   * @returns {Object} NO2 average data
+   */
+  async getBatumiNO2Average(options = {}) {
+    return this.getBatumiPollutantAverage('NO2', options);
+  }
+
+  /**
+   * Get Batumi O3 average from all stations
+   * @param {Object} options - Query options
+   * @returns {Object} O3 average data
+   */
+  async getBatumiO3Average(options = {}) {
+    return this.getBatumiPollutantAverage('O3', options);
+  }
+
+  /**
+   * Get Batumi SO2 average from all stations
+   * @param {Object} options - Query options
+   * @returns {Object} SO2 average data
+   */
+  async getBatumiSO2Average(options = {}) {
+    return this.getBatumiPollutantAverage('SO2', options);
+  }
+
+  /**
+   * Get Batumi CO average from all stations
+   * @param {Object} options - Query options
+   * @returns {Object} CO average data
+   */
+  async getBatumiCOAverage(options = {}) {
+    return this.getBatumiPollutantAverage('CO', options);
+  }
+
+  /**
+   * Get comprehensive air quality report for all pollutants in Batumi
+   * @param {Object} options - Query options
+   * @returns {Object} Comprehensive air quality data for all pollutants
+   */
+  async getBatumiAllPollutantsAverage(options = {}) {
+    console.log('🔍 Calculating all pollutants averages for Batumi...');
+    
+    const pollutants = ['PM10', 'PM2.5', 'NO2', 'O3', 'SO2', 'CO'];
+    const results = {};
+    const errors = {};
+    let successfulCalculations = 0;
+
+    for (const pollutant of pollutants) {
+      try {
+        const result = await this.getBatumiPollutantAverage(pollutant, options);
+        results[pollutant] = result;
+        successfulCalculations++;
+      } catch (error) {
+        console.error(`⚠️ Failed to get ${pollutant} average:`, error.message);
+        errors[pollutant] = error.message;
+      }
+    }
+
+    return {
+      success: true,
+      timestamp: new Date().toISOString(),
+      currentGeorgiaTime: new Date().toLocaleString('en-US', { 
+        timeZone: 'Asia/Tbilisi',
+        year: 'numeric',
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      city: 'Batumi',
+      pollutantAverages: results,
+      errors: Object.keys(errors).length > 0 ? errors : undefined,
+      summary: {
+        totalPollutants: pollutants.length,
+        successfulCalculations,
+        failedCalculations: pollutants.length - successfulCalculations
+      }
+    };
+  }
 }
 
 export default new AirQualityService();

@@ -137,4 +137,53 @@ router.get('/kutaisi/co-average', airQualityController.getKutaisiCOAverage);
  */
 router.get('/kutaisi/all-pollutants-average', airQualityController.getKutaisiAllPollutantsAverage);
 
+/**
+ * @route GET /api/air-quality/batumi/pm25-average
+ * @desc Get PM2.5 average for all Batumi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/batumi/pm25-average', airQualityController.getBatumiPM25Average);
+
+/**
+ * @route GET /api/air-quality/batumi/pm10-average
+ * @desc Get PM10 average for all Batumi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/batumi/pm10-average', airQualityController.getBatumiPM10Average);
+
+/**
+ * @route GET /api/air-quality/batumi/no2-average
+ * @desc Get NO2 average for all Batumi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/batumi/no2-average', airQualityController.getBatumiNO2Average);
+
+/**
+ * @route GET /api/air-quality/batumi/o3-average
+ * @desc Get O3 average for all Batumi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/batumi/o3-average', airQualityController.getBatumiO3Average);
+
+/**
+ * @route GET /api/air-quality/batumi/so2-average
+ * @desc Get SO2 average for all Batumi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/batumi/so2-average', airQualityController.getBatumiSO2Average);
+
+/**
+ * @route GET /api/air-quality/batumi/co-average
+ * @desc Get CO average for all Batumi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/batumi/co-average', airQualityController.getBatumiCOAverage);
+
+/**
+ * @route GET /api/air-quality/batumi/all-pollutants-average
+ * @desc Get averages for all pollutants from all Batumi monitoring stations
+ * @query {number} hours - Hours of data to look back (default: 6)
+ */
+router.get('/batumi/all-pollutants-average', airQualityController.getBatumiAllPollutantsAverage);
+
 export default router;
