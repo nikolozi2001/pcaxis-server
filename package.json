@@ -10,13 +10,20 @@
     "dev": "node --watch index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["pxweb", "statistics", "api", "georgia", "pcaxis"],
+  "keywords": [
+    "pxweb",
+    "statistics",
+    "api",
+    "georgia",
+    "pcaxis"
+  ],
   "author": "Your Name",
   "license": "MIT",
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.18.2",
-    "jsonstat-toolkit": "^2.0.0"
+    "jsonstat-toolkit": "^2.0.0",
+    "node-fetch": "^3.3.2"
   },
   "engines": {
     "node": ">=18.0.0"
