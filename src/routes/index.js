@@ -6,6 +6,7 @@ import datasetRoutes from './datasets.js';
 import healthRoutes from './health.js';
 import navigationRoutes from './navigation.js';
 import airQualityRoutes from './airQuality.js';
+import riversRoutes from './rivers.js';
 
 const router = express.Router();
 
@@ -13,6 +14,7 @@ const router = express.Router();
 router.use('/datasets', datasetRoutes);
 router.use('/navigation', navigationRoutes);
 router.use('/air-quality', airQualityRoutes);
+router.use('/rivers', riversRoutes);
 
 // Health Routes
 router.use('/health', healthRoutes);
@@ -27,6 +29,7 @@ router.get('/', (req, res) => {
       datasets: '/api/datasets',
       navigation: '/api/navigation',
       airQuality: '/api/air-quality',
+      rivers: '/api/rivers',
       health: '/health'
     },
     documentation: {
@@ -45,6 +48,15 @@ router.get('/', (req, res) => {
       navigation: {
         explore: 'GET /api/navigation/explore',
         categories: 'GET /api/navigation/categories'
+      },
+      rivers: {
+        list: 'GET /api/rivers?lang=geo|eng',
+        byId: 'GET /api/rivers/:id?lang=geo|eng',
+        stats: 'GET /api/rivers/stats?lang=geo|eng',
+        search: 'GET /api/rivers/search?q=:query&lang=geo|eng',
+        bySeaBasin: 'GET /api/rivers/sea-basin/:basin?lang=geo|eng',
+        bilingual: 'GET /api/rivers/bilingual',
+        bilingualById: 'GET /api/rivers/bilingual/:id'
       },
       health: {
         simple: 'GET /health',
