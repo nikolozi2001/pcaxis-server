@@ -20,11 +20,11 @@ export class DataProcessingService {
     if (otherDims.length === 0) {
       // Single dimension (only years)
       return this._processSingleDimension(dataset, years, yearDimId);
-    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction') {
-      // Two dimensions (years + one category) - except for water-abstraction
+    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators') {
+      // Two dimensions (years + one category) - except for water-abstraction and material-flow-indicators
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
-      // Three or more dimensions (complex multi-dimensional data) OR water-abstraction
+      // Three or more dimensions (complex multi-dimensional data) OR water-abstraction OR material-flow-indicators
       return this._processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId);
     }
   }
@@ -122,6 +122,11 @@ export class DataProcessingService {
     // Special handling for water-abstraction dataset (treat as multi-dimensional)
     if (datasetId === 'water-abstraction') {
       return this._processWaterAbstractionSpecial(dataset, years, yearDimId, otherDims);
+    }
+
+    // Special handling for material-flow-indicators dataset (treat as multi-dimensional)
+    if (datasetId === 'material-flow-indicators') {
+      return this._processMaterialFlowIndicatorsSpecial(dataset, years, yearDimId, otherDims);
     }
 
     // Default processing for other datasets
@@ -257,6 +262,53 @@ export class DataProcessingService {
           index: index.toString(), 
           label: categoryLabels[catId] || catId 
         })) // Provide category mapping
+      }
+    };
+  }
+
+  /**
+   * Special processing for material-flow-indicators dataset with numeric indices
+   */
+  _processMaterialFlowIndicatorsSpecial(dataset, years, yearDimId, otherDims) {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && year.toString().trim() !== '');
+
+    // Get the indicators dimension
+    const indicatorDim = otherDims.find(dim => dim === 'Indicators') || otherDims[0];
+    const indicatorValues = dataset.Dimension(indicatorDim).id;
+    const indicatorLabels = this._getCategoryLabels(dataset, indicatorDim);
+
+    const data = [];
+
+    // Create a row for each valid year with numeric indices
+    validYears.forEach((year, yearIndex) => {
+      const row = { year: yearIndex.toString() }; // Convert year to numeric index
+
+      indicatorValues.forEach((indicatorId, indicatorIndex) => {
+        const queryObj = { [yearDimId]: year, [indicatorDim]: indicatorId };
+        const cell = dataset.Data(queryObj);
+        row[indicatorIndex.toString()] = cell ? Number(cell.value) : null; // Use numeric indices for indicators
+      });
+
+      data.push(row);
+    });
+
+    return {
+      title: dataset.label || 'მატერიალური ნაკადების ძირითადი მაჩვენებლები',
+      dimensions: [yearDimId, indicatorDim],
+      categories: indicatorValues.map((indId, index) => index.toString()), // Use numeric indices
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(validYears),
+        dimensionCount: otherDims.length + 1,
+        seriesCount: indicatorValues.length,
+        yearMapping: validYears.map((year, index) => ({ index: index.toString(), value: year })), // Provide year mapping
+        categoryMapping: indicatorValues.map((indId, index) => ({
+          index: index.toString(),
+          label: indicatorLabels[indId] || indId
+        })) // Provide indicator mapping
       }
     };
   }
