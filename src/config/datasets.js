@@ -317,6 +317,22 @@ export const DATASETS = {
     description: 'Green economy and sustainable development indicators',
     path: 'Environment%20Statistics/Environmental-Economic%20Accounts/02_Green_Economy.px',
     category: 'environment'
+  },
+  'material-flow-indicators': {
+    id: 'material-flow-indicators',
+    name: 'Main Indicators of Material Flows',
+    description: 'მატერიალური ნაკადების ძირითადი მაჩვენებლები',
+    path: 'Environment%20Statistics/Environmental-Economic%20Accounts/1.MFA.px',
+    category: 'environment',
+    subcategory: 'environmental-economic-accounts'
+  },
+  'domestic-consumption-material-intensity': {
+    id: 'domestic-consumption-material-intensity',
+    name: 'Domestic Consumption, Material Intensity and Resource Productivity',
+    description: 'შიდა მოხმარება ერთ სულზე, მატერიალური ინტენსივობა და რესურსების პროდუქტიულობა',
+    path: 'Environment%20Statistics/Environmental-Economic%20Accounts/2.MFA-DMC.px',
+    category: 'environment',
+    subcategory: 'environmental-economic-accounts'
   }
 };
 
