@@ -123,6 +123,170 @@ export const DATASETS = {
     category: 'environment'
   },
 
+  // Water Resources Indicators
+  'water-use-households': {
+    id: 'water-use-households',
+    name: 'Water Use in Households per Capita',
+    description: 'C-4: წყლის გამოყენება შინამეურნეობებში ერთ სულ მოსახლეზე',
+    path: 'Environment%20Statistics/Environmental%20Indicators/01.C_4.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+  'water-supply-population': {
+    id: 'water-supply-population',
+    name: 'Water Supply and Connected Population',
+    description: 'C-5. წყალმომარაგება და წყალმომარაგების სისტემაზე მიერთებული მოსახლეობა',
+    path: 'Environment%20Statistics/Environmental%20Indicators/02.C_5.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+  'water-losses': {
+    id: 'water-losses',
+    name: 'Water Losses',
+    description: 'C-7. წყლის დანაკარგები',
+    path: 'Environment%20Statistics/Environmental%20Indicators/03.C_7.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+  'sewerage-network-population': {
+    id: 'sewerage-network-population',
+    name: 'Population Connected to Sewerage Network',
+    description: 'C-14. წყალარინების ქსელზე მიერთებული მოსახლეობა',
+    path: 'Environment%20Statistics/Environmental%20Indicators/04.C_14.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+
+  // Agriculture Indicators
+  'fertilizer-use': {
+    id: 'fertilizer-use',
+    name: 'Fertilizer Use',
+    description: 'F-2. სასუქების გამოყენება',
+    path: 'Environment%20Statistics/Environmental%20Indicators/05.F_2.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+  'pesticide-consumption': {
+    id: 'pesticide-consumption',
+    name: 'Pesticide Consumption',
+    description: 'F-4. პესტიციდების მოხმარება#(იმპორტისა და ექსპორტის სხვაობა აქტიური კომპონენტების მიხედვით)',
+    path: 'Environment%20Statistics/Environmental%20Indicators/06.F_4.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+
+  // Energy Indicators
+  'final-energy-consumption': {
+    id: 'final-energy-consumption',
+    name: 'Final Energy Consumption',
+    description: 'G-1. ენერგიის საბოლოო მოხმარება',
+    path: 'Environment%20Statistics/Environmental%20Indicators/07.G_1.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+  'primary-energy-supply': {
+    id: 'primary-energy-supply',
+    name: 'Total Primary Energy Supply',
+    description: 'G-2. პირველადი ენერგიის ჯამური მიწოდება',
+    path: 'Environment%20Statistics/Environmental%20Indicators/08.G_2.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+  'energy-intensity': {
+    id: 'energy-intensity',
+    name: 'Energy Intensity',
+    description: 'G-3. ენერგოინტენსიურობა',
+    path: 'Environment%20Statistics/Environmental%20Indicators/09.G_3.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+  'renewable-energy-supply': {
+    id: 'renewable-energy-supply',
+    name: 'Renewable Energy Supply',
+    description: 'G-4. განახლებადი ენერგიის მიწოდება',
+    path: 'Environment%20Statistics/Environmental%20Indicators/10.G_4.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+
+  // Transport Indicators
+  'passenger-turnover': {
+    id: 'passenger-turnover',
+    name: 'Passenger Turnover',
+    description: 'H-1. მგზავრთბრუნვა',
+    path: 'Environment%20Statistics/Environmental%20Indicators/11.H_1.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+  'freight-turnover': {
+    id: 'freight-turnover',
+    name: 'Freight Turnover',
+    description: 'H-2. ტვირთბრუნვა',
+    path: 'Environment%20Statistics/Environmental%20Indicators/12.H_2.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+  'vehicle-fleet-fuel-type': {
+    id: 'vehicle-fleet-fuel-type',
+    name: 'Vehicle Fleet by Fuel Type',
+    description: 'H-3. საავტომობილო პარკი საწვავის ტიპის მიხედვით',
+    path: 'Environment%20Statistics/Environmental%20Indicators/13.H_3.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+  'vehicle-fleet-age': {
+    id: 'vehicle-fleet-age',
+    name: 'Vehicle Fleet Age',
+    description: 'H-4. საავტომობილო პარკის ასაკი',
+    path: 'Environment%20Statistics/Environmental%20Indicators/14.H_4.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+
+  // Air Quality Indicators
+  'atmospheric-emissions': {
+    id: 'atmospheric-emissions',
+    name: 'Harmful Substances Emitted into Atmospheric Air',
+    description: 'A-1. ატმოსფერულ ჰაერში გაფრქვეული მავნე ნივთიერებები, ათასი ტ/წელი',
+    path: 'Environment%20Statistics/Environmental%20Indicators/A1.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+  'ozone-depleting-substances': {
+    id: 'ozone-depleting-substances',
+    name: 'Consumption of Ozone-Depleting Substances',
+    description: 'A-3. ოზონდამშლელი ნივთიერებების (ოდნ) მოხმარება, ოდპ ტონა',
+    path: 'Environment%20Statistics/Environmental%20Indicators/A3.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+
+  // Climate Indicators
+  'air-temperature': {
+    id: 'air-temperature',
+    name: 'Air Temperature',
+    description: 'B-1. ჰაერის ტემპერატურა',
+    path: 'Environment%20Statistics/Environmental%20Indicators/B-1_Air_Temperature.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+  'atmospheric-precipitation': {
+    id: 'atmospheric-precipitation',
+    name: 'Atmospheric Precipitation',
+    description: 'B-2. ატმოსფერული ნალექი',
+    path: 'Environment%20Statistics/Environmental%20Indicators/B-2_Atmospheric_precipitation.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+  'greenhouse-gas-emissions': {
+    id: 'greenhouse-gas-emissions',
+    name: 'Greenhouse Gas Emissions',
+    description: 'B-3. სათბური გაზების ემისიები',
+    path: 'Environment%20Statistics/Environmental%20Indicators/B-3_greenhouse-gas-emmisions.px',
+    category: 'environment',
+    subcategory: 'environmental-indicators'
+  },
+
   // Natural Hazards
   'natural-disasters': {
     id: 'natural-disasters',
