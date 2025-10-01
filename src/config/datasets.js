@@ -302,6 +302,30 @@ export const DATASETS = {
     path: 'Environment%20Statistics/Natural%20Hazards%20and%20Violations%20of%20Law/02_Environmental_Violations.px',
     category: 'environment'
   },
+  'environmental-violations-law': {
+    id: 'environmental-violations-law',
+    name: 'Environmental Violations by Regions and Types',
+    description: 'გარემოს დაცვის სფეროში გამოვლენილი სამართალდარღვევების რაოდენობა რეგიონებისა და დარღვევის სახეების მიხედვით (ერთეული)',
+    path: 'Environment%20Statistics/Natural%20Hazards%20and%20Violations%20of%20Law/1.Violations_of_Law.px',
+    category: 'environment',
+    subcategory: 'natural-hazards'
+  },
+  'hydro-meteorological-hazards': {
+    id: 'hydro-meteorological-hazards',
+    name: 'Hydro-Meteorological Hazard Occurrences',
+    description: 'სტიქიური ჰიდრომეტეოროლოგიური მოვლენების შემთხვევათა რაოდენობა (ერთეული)',
+    path: 'Environment%20Statistics/Natural%20Hazards%20and%20Violations%20of%20Law/2.ENVR_Hydro_hazard.px',
+    category: 'environment',
+    subcategory: 'natural-hazards'
+  },
+  'geological-phenomena': {
+    id: 'geological-phenomena',
+    name: 'Geological Phenomena and Risk Assessment',
+    description: 'გეოლოგიური მოვლენების (მეწყერი, ღვარცოფი) რაოდენობა, ადამიანთა მსხვერპლი და საშიშროების რისკის ზონაში მოქცეული ობიექტები (ერთეული)',
+    path: 'Environment%20Statistics/Natural%20Hazards%20and%20Violations%20of%20Law/3.Geological_Phenomena.px',
+    category: 'environment',
+    subcategory: 'natural-hazards'
+  },
 
   // Environmental-Economic Accounts
   'environmental-expenditure': {
