@@ -69,6 +69,54 @@ export const DATASETS = {
     path: 'Environment%20Statistics/Forest%20Resources/02_Forest_Production.px',
     category: 'environment'
   },
+  'felled-timber-volume': {
+    id: 'felled-timber-volume',
+    name: 'Volume of Timber from Forest Cutting',
+    description: 'ტყის ჭრით მიღებული ხე-ტყის მოცულობა(კუბური მეტრი)',
+    path: 'Environment%20Statistics/Forest%20Resources/1.Felled_Timber.px',
+    category: 'environment',
+    subcategory: 'forest-resources'
+  },
+  'forest-planting-recovery': {
+    id: 'forest-planting-recovery',
+    name: 'Forest Planting and Natural Recovery Support',
+    description: 'ტყის თესვა/დარგვა და ბუნებრივი განახლებისთვის ხელშეწყობა (ჰექტარი)',
+    path: 'Environment%20Statistics/Forest%20Resources/2.Forest_planting_and_recovery.px',
+    category: 'environment',
+    subcategory: 'forest-resources'
+  },
+  'forest-fires': {
+    id: 'forest-fires',
+    name: 'Forest and Field Fires by Regions',
+    description: 'ტყისა და ველის ხანძრები რეგიონების მიხედვით',
+    path: 'Environment%20Statistics/Forest%20Resources/3.Forest_fires.px',
+    category: 'environment',
+    subcategory: 'forest-resources'
+  },
+  'forest-fund-by-regions': {
+    id: 'forest-fund-by-regions',
+    name: 'Forest Fund by Regions',
+    description: 'ტყის ფონდი რეგიონების მიხედვით',
+    path: 'Environment%20Statistics/Forest%20Resources/Forest_Area.px',
+    category: 'environment',
+    subcategory: 'forest-resources'
+  },
+  'illegal-logging': {
+    id: 'illegal-logging',
+    name: 'Illegal Logging',
+    description: 'ტყის უკანონო ჭრა',
+    path: 'Environment%20Statistics/Forest%20Resources/Illegal-logging.px',
+    category: 'environment',
+    subcategory: 'forest-resources'
+  },
+  'timber-by-cutting-purpose': {
+    id: 'timber-by-cutting-purpose',
+    name: 'Timber Volume by Cutting Purpose',
+    description: 'ხე-ტყის მოცულობა ჭრის მიზნების მიხედვით',
+    path: 'Environment%20Statistics/Forest%20Resources/timber-by-cutting-purpose_.px',
+    category: 'environment',
+    subcategory: 'forest-resources'
+  },
 
   // Protected Areas
   'protected-areas-categories': {
