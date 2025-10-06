@@ -20,11 +20,11 @@ export class DataProcessingService {
     if (otherDims.length === 0) {
       // Single dimension (only years)
       return this._processSingleDimension(dataset, years, yearDimId);
-    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume') {
-      // Two dimensions (years + one category) - except for water-abstraction, material-flow-indicators, and felled-timber-volume
+    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery') {
+      // Two dimensions (years + one category) - except for special datasets that need numeric indices
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
-      // Three or more dimensions (complex multi-dimensional data) OR water-abstraction OR material-flow-indicators OR felled-timber-volume
+      // Three or more dimensions (complex multi-dimensional data) OR datasets requiring numeric indices
       return this._processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId);
     }
   }
@@ -132,6 +132,16 @@ export class DataProcessingService {
     // Special handling for felled-timber-volume dataset (treat as multi-dimensional)
     if (datasetId === 'felled-timber-volume') {
       return this._processFelledTimberVolumeSpecial(dataset, years, yearDimId, otherDims);
+    }
+
+    // Special handling for illegal-logging dataset (treat as multi-dimensional)
+    if (datasetId === 'illegal-logging') {
+      return this._processIllegalLoggingSpecial(dataset, years, yearDimId, otherDims);
+    }
+
+    // Special handling for forest-planting-recovery dataset (treat as multi-dimensional)
+    if (datasetId === 'forest-planting-recovery') {
+      return this._processForestPlantingRecoverySpecial(dataset, years, yearDimId, otherDims);
     }
 
     // Default processing for other datasets
@@ -361,6 +371,126 @@ export class DataProcessingService {
           index: index.toString(),
           label: categoryLabels[catId] || catId
         })) // Provide category mapping
+      }
+    };
+  }
+
+  /**
+   * Special processing for illegal-logging dataset with numeric indices
+   */
+  _processIllegalLoggingSpecial(dataset, years, yearDimId, otherDims) {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && year.toString().trim() !== '');
+
+    // Get the categories dimension (regions, violation types, etc.)
+    const categoryDim = otherDims[0]; // Use the first non-year dimension
+    const categoryValues = dataset.Dimension(categoryDim).id;
+    const categoryLabels = this._getCategoryLabels(dataset, categoryDim);
+
+    const data = [];
+
+    // Create a row for each valid year with numeric indices
+    validYears.forEach((year, yearIndex) => {
+      const row = { year: yearIndex.toString() }; // Convert year to numeric index
+
+      categoryValues.forEach((categoryId, categoryIndex) => {
+        const queryObj = { [yearDimId]: year, [categoryDim]: categoryId };
+        const cell = dataset.Data(queryObj);
+        row[categoryIndex.toString()] = cell ? Number(cell.value) : null; // Use numeric indices for categories
+      });
+
+      data.push(row);
+    });
+
+    return {
+      title: dataset.label || 'ტყის უკანონო ჭრა',
+      dimensions: [yearDimId, categoryDim],
+      categories: categoryValues.map((catId, index) => index.toString()), // Use numeric indices
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(validYears),
+        dimensionCount: otherDims.length + 1,
+        seriesCount: categoryValues.length,
+        yearMapping: validYears.map((year, index) => ({ index: index.toString(), value: year })), // Provide year mapping
+        categoryMapping: categoryValues.map((catId, index) => ({
+          index: index.toString(),
+          label: categoryLabels[catId] || catId
+        })) // Provide category mapping
+      }
+    };
+  }
+
+  /**
+   * Special processing for forest-planting-recovery dataset with numeric indices
+   */
+  _processForestPlantingRecoverySpecial(dataset, years, yearDimId, otherDims) {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && year.toString().trim() !== '');
+
+    // This dataset has 3 dimensions: Regions, Year, and Category
+    // We need to handle all dimensions properly
+    const regionDim = otherDims.find(dim => dim.toLowerCase().includes('region')) || otherDims[0];
+    const categoryDim = otherDims.find(dim => dim.toLowerCase().includes('category')) || otherDims[1];
+    
+    const regionValues = dataset.Dimension(regionDim).id;
+    const regionLabels = this._getCategoryLabels(dataset, regionDim);
+    const categoryValues = dataset.Dimension(categoryDim).id;
+    const categoryLabels = this._getCategoryLabels(dataset, categoryDim);
+
+    const data = [];
+
+    // Create a row for each valid year with numeric indices
+    validYears.forEach((year, yearIndex) => {
+      const row = { year: yearIndex.toString() }; // Convert year to numeric index
+
+      let seriesIndex = 0;
+      // Combine regions and categories to create series
+      regionValues.forEach((regionId) => {
+        categoryValues.forEach((categoryId) => {
+          const queryObj = { 
+            [yearDimId]: year, 
+            [regionDim]: regionId, 
+            [categoryDim]: categoryId 
+          };
+          const cell = dataset.Data(queryObj);
+          row[seriesIndex.toString()] = cell ? Number(cell.value) : null;
+          seriesIndex++;
+        });
+      });
+
+      data.push(row);
+    });
+
+    // Create combined labels for regions and categories
+    const combinedLabels = [];
+    regionValues.forEach((regionId) => {
+      categoryValues.forEach((categoryId) => {
+        const regionLabel = regionLabels[regionId] || regionId;
+        const categoryLabel = categoryLabels[categoryId] || categoryId;
+        combinedLabels.push(`${regionLabel} - ${categoryLabel}`);
+      });
+    });
+
+    const totalSeries = regionValues.length * categoryValues.length;
+
+    return {
+      title: dataset.label || 'ტყის თესვა/დარგვა და ბუნებრივი განახლებისთვის ხელშეწყობა',
+      dimensions: [yearDimId, regionDim, categoryDim],
+      categories: Array.from({length: totalSeries}, (_, i) => i.toString()), // Use numeric indices
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(validYears),
+        dimensionCount: otherDims.length + 1,
+        seriesCount: totalSeries,
+        yearMapping: validYears.map((year, index) => ({ index: index.toString(), value: year })), // Provide year mapping
+        categoryMapping: combinedLabels.map((label, index) => ({
+          index: index.toString(),
+          label: label
+        })) // Provide category mapping with combined region-category labels
       }
     };
   }
