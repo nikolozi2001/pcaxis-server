@@ -20,11 +20,11 @@ export class DataProcessingService {
     if (otherDims.length === 0) {
       // Single dimension (only years)
       return this._processSingleDimension(dataset, years, yearDimId);
-    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators') {
-      // Two dimensions (years + one category) - except for water-abstraction and material-flow-indicators
+    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume') {
+      // Two dimensions (years + one category) - except for water-abstraction, material-flow-indicators, and felled-timber-volume
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
-      // Three or more dimensions (complex multi-dimensional data) OR water-abstraction OR material-flow-indicators
+      // Three or more dimensions (complex multi-dimensional data) OR water-abstraction OR material-flow-indicators OR felled-timber-volume
       return this._processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId);
     }
   }
@@ -127,6 +127,11 @@ export class DataProcessingService {
     // Special handling for material-flow-indicators dataset (treat as multi-dimensional)
     if (datasetId === 'material-flow-indicators') {
       return this._processMaterialFlowIndicatorsSpecial(dataset, years, yearDimId, otherDims);
+    }
+
+    // Special handling for felled-timber-volume dataset (treat as multi-dimensional)
+    if (datasetId === 'felled-timber-volume') {
+      return this._processFelledTimberVolumeSpecial(dataset, years, yearDimId, otherDims);
     }
 
     // Default processing for other datasets
@@ -309,6 +314,53 @@ export class DataProcessingService {
           index: index.toString(),
           label: indicatorLabels[indId] || indId
         })) // Provide indicator mapping
+      }
+    };
+  }
+
+  /**
+   * Special processing for felled-timber-volume dataset with numeric indices
+   */
+  _processFelledTimberVolumeSpecial(dataset, years, yearDimId, otherDims) {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && year.toString().trim() !== '');
+
+    // Get the categories dimension (regions, timber types, etc.)
+    const categoryDim = otherDims[0]; // Use the first non-year dimension
+    const categoryValues = dataset.Dimension(categoryDim).id;
+    const categoryLabels = this._getCategoryLabels(dataset, categoryDim);
+
+    const data = [];
+
+    // Create a row for each valid year with numeric indices
+    validYears.forEach((year, yearIndex) => {
+      const row = { year: yearIndex.toString() }; // Convert year to numeric index
+
+      categoryValues.forEach((categoryId, categoryIndex) => {
+        const queryObj = { [yearDimId]: year, [categoryDim]: categoryId };
+        const cell = dataset.Data(queryObj);
+        row[categoryIndex.toString()] = cell ? Number(cell.value) : null; // Use numeric indices for categories
+      });
+
+      data.push(row);
+    });
+
+    return {
+      title: dataset.label || 'ტყის ჭრით მიღებული ხე-ტყის მოცულობა',
+      dimensions: [yearDimId, categoryDim],
+      categories: categoryValues.map((catId, index) => index.toString()), // Use numeric indices
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(validYears),
+        dimensionCount: otherDims.length + 1,
+        seriesCount: categoryValues.length,
+        yearMapping: validYears.map((year, index) => ({ index: index.toString(), value: year })), // Provide year mapping
+        categoryMapping: categoryValues.map((catId, index) => ({
+          index: index.toString(),
+          label: categoryLabels[catId] || catId
+        })) // Provide category mapping
       }
     };
   }
