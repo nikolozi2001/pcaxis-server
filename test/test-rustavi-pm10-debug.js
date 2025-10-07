@@ -1,4 +1,4 @@
-import airQualityService from './src/services/airQualityService.js';
+import airQualityService from '../src/services/airQualityService.js';
 
 console.log('🔍 Testing Rustavi PM10 calculation with debug info...');
 

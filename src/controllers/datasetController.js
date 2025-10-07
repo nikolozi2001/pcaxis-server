@@ -79,7 +79,7 @@ export class DatasetController {
       
       // Fetch metadata in the requested language
       const { metadata } = await pxwebService.fetchData(dataset.path, lang);
-      const processedMetadata = dataProcessingService.processMetadata(metadata);
+      const processedMetadata = dataProcessingService.processMetadata(metadata, id);
 
       res.json({
         success: true,

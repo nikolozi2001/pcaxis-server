@@ -1,4 +1,4 @@
-import airQualityService from './src/services/airQualityService.js';
+import airQualityService from '../src/services/airQualityService.js';
 
 console.log('🔍 Checking all available Rustavi stations...');
 

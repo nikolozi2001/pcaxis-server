@@ -3,7 +3,7 @@
  * Tests the new functionality to calculate averages for all pollutants in Kutaisi
  */
 
-import airQualityService from './src/services/airQualityService.js';
+import airQualityService from '../src/services/airQualityService.js';
 
 console.log('🏛️ Testing Kutaisi Air Quality Averages');
 console.log('='.repeat(60));
