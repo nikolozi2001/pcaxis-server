@@ -369,12 +369,26 @@ export class DataProcessingService {
     const categoryDim = otherDims[0]; // Use the first non-year dimension
     const categoryValues = dataset.Dimension(categoryDim).id;
     const categoryLabels = this._getCategoryLabels(dataset, categoryDim);
+    
+    // Get year labels to convert indices to actual years
+    const yearLabels = this._getCategoryLabels(dataset, yearDimId);
 
     const data = [];
 
-    // Create a row for each valid year with numeric indices
+    // Create a row for each valid year with actual years
     validYears.forEach((year, yearIndex) => {
-      const row = { year: yearIndex.toString() }; // Convert year to numeric index
+      // Get the actual year from the year labels or use hardcoded mapping
+      let actualYear = 2010 + yearIndex; // Default mapping starting from 2010
+      
+      if (yearLabels && yearLabels[year]) {
+        const yearLabel = yearLabels[year];
+        const parsedYear = parseInt(yearLabel);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+      
+      const row = { year: actualYear }; // Use actual year instead of numeric index
 
       categoryValues.forEach((categoryId, categoryIndex) => {
         const queryObj = { [yearDimId]: year, [categoryDim]: categoryId };
@@ -393,10 +407,32 @@ export class DataProcessingService {
       metadata: {
         totalRecords: data.length,
         hasCategories: true,
-        yearRange: this._getYearRange(validYears),
+        yearRange: this._getYearRange(validYears.map((year, index) => {
+          // Calculate actual years for yearRange
+          let actualYear = 2010 + index;
+          if (yearLabels && yearLabels[year]) {
+            const yearLabel = yearLabels[year];
+            const parsedYear = parseInt(yearLabel);
+            if (!isNaN(parsedYear)) {
+              actualYear = parsedYear;
+            }
+          }
+          return actualYear;
+        })),
         dimensionCount: otherDims.length + 1,
         seriesCount: categoryValues.length,
-        yearMapping: validYears.map((year, index) => ({ index: index.toString(), value: year })), // Provide year mapping
+        yearMapping: validYears.map((year, index) => {
+          // Get actual year from labels or use hardcoded mapping
+          let actualYear = 2010 + index; // Default mapping starting from 2010
+          if (yearLabels && yearLabels[year]) {
+            const yearLabel = yearLabels[year];
+            const parsedYear = parseInt(yearLabel);
+            if (!isNaN(parsedYear)) {
+              actualYear = parsedYear;
+            }
+          }
+          return { index: index.toString(), value: actualYear };
+        }), // Provide year mapping
         categoryMapping: categoryValues.map((catId, index) => ({
           index: index.toString(),
           label: categoryLabels[catId] || catId
