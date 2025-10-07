@@ -71,6 +71,10 @@ export class DatasetController {
         });
       }
 
+      // Add random delay to spread out concurrent requests
+      const delay = Math.random() * 1500; // 0-1500ms random delay
+      await new Promise(resolve => setTimeout(resolve, delay));
+
       const dataset = DATASETS[id];
       
       // Fetch metadata in the requested language
@@ -86,6 +90,7 @@ export class DatasetController {
         }
       });
     } catch (error) {
+      console.error(`[${new Date().toISOString()}] getMetadata error for '${req.params.id}':`, error.message);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch metadata',
@@ -112,6 +117,10 @@ export class DatasetController {
         });
       }
 
+      // Add random delay to spread out concurrent requests
+      const delay = Math.random() * 2000; // 0-2000ms random delay
+      await new Promise(resolve => setTimeout(resolve, delay));
+
       const dataset = DATASETS[id];
       const { dataset: jsonStatDataset } = await pxwebService.fetchData(dataset.path, lang);
       const processedData = dataProcessingService.processForChart(jsonStatDataset, id); // Pass dataset ID
@@ -125,6 +134,7 @@ export class DatasetController {
         }
       });
     } catch (error) {
+      console.error(`[${new Date().toISOString()}] getData error for '${req.params.id}':`, error.message);
       res.status(500).json({
         success: false,
         error: 'Failed to fetch dataset data',
