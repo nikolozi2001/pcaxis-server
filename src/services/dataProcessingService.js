@@ -23,6 +23,9 @@ export class DataProcessingService {
     } else if (datasetId === 'water-use-households') {
       // Special handling for water-use-households to use actual years
       return this._processWaterUseHouseholdsSpecial(dataset, years, yearDimId, otherDims);
+    } else if (datasetId === 'sewerage-network-population') {
+      // Special handling for sewerage-network-population to use actual years
+      return this._processSewerageNetworkPopulationSpecial(dataset, years, yearDimId, otherDims);
     } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery') {
       // Two dimensions (years + one category) - except for special datasets that need numeric indices
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
@@ -673,6 +676,87 @@ export class DataProcessingService {
         totalRecords: rows.length,
         hasCategories: true,
         yearRange: this._getYearRange(actualYears)
+      }
+    };
+  }
+
+  /**
+   * Process sewerage-network-population dataset with actual years
+   * @param {Object} dataset 
+   * @param {Array} years 
+   * @param {string} yearDimId 
+   * @param {Array} otherDims 
+   * @returns {Object}
+   */
+  _processSewerageNetworkPopulationSpecial(dataset, years, yearDimId, otherDims) {
+    const catDimId = otherDims[0];
+    const catIds = dataset.Dimension(catDimId).id;
+    const catLabels = this._getCategoryLabels(dataset, catDimId);
+    
+    // Directly get the year values from dataset metadata
+    // Since years are ["0", "1", "2", ...] and we need [2015, 2016, 2017, ...]
+    const yearValueTexts = dataset.Dimension(yearDimId).Category().label;
+    
+    const rows = years.map((year, index) => {
+      // Get the actual year from the valueTexts
+      let actualYear = 2015 + index; // Start from 2015 as per metadata
+      
+      // If we have year labels, try to extract the actual year
+      if (yearValueTexts && yearValueTexts[year]) {
+        const yearText = yearValueTexts[year];
+        const parsedYear = parseInt(yearText);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+      
+      const row = { year: actualYear };
+      
+      catIds.forEach(catId => {
+        const cell = dataset.Data({ [yearDimId]: year, [catDimId]: catId });
+        const label = catLabels[catId] || catId;
+        row[label] = cell ? Number(cell.value) : null;
+      });
+      
+      return row;
+    });
+
+    // Calculate actual years for yearRange
+    const actualYears = years.map((year, index) => {
+      if (yearValueTexts && yearValueTexts[year]) {
+        const yearText = yearValueTexts[year];
+        const parsedYear = parseInt(yearText);
+        if (!isNaN(parsedYear)) {
+          return parsedYear;
+        }
+      }
+      return 2015 + index; // Default mapping
+    });
+
+    // Create year mapping
+    const yearMapping = {};
+    years.forEach((year, index) => {
+      let actualYear = 2015 + index;
+      if (yearValueTexts && yearValueTexts[year]) {
+        const yearText = yearValueTexts[year];
+        const parsedYear = parseInt(yearText);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+      yearMapping[year] = actualYear;
+    });
+
+    return {
+      title: dataset.label || 'წყალარინების ქსელზე მიერთებული მოსახლეობა',
+      dimensions: [yearDimId, catDimId],
+      categories: catIds.map(id => catLabels[id] || id),
+      data: rows,
+      metadata: {
+        totalRecords: rows.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(actualYears),
+        yearMapping: yearMapping
       }
     };
   }
