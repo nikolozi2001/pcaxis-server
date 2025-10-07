@@ -20,6 +20,9 @@ export class DataProcessingService {
     if (otherDims.length === 0) {
       // Single dimension (only years)
       return this._processSingleDimension(dataset, years, yearDimId);
+    } else if (datasetId === 'water-use-households') {
+      // Special handling for water-use-households to use actual years
+      return this._processWaterUseHouseholdsSpecial(dataset, years, yearDimId, otherDims);
     } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery') {
       // Two dimensions (years + one category) - except for special datasets that need numeric indices
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
@@ -79,8 +82,23 @@ export class DataProcessingService {
     const catIds = dataset.Dimension(catDimId).id;
     const catLabels = this._getCategoryLabels(dataset, catDimId);
     
-    const rows = years.map(year => {
-      const row = { year: Number(year) || year };
+    // Get year labels using the same method as _getCategoryLabels
+    const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+    
+    const rows = years.map((year, index) => {
+      // Get the actual year value from the labels
+      let actualYear = Number(year) || year;
+      
+      // Try to get the actual year from the year labels
+      if (yearLabels && yearLabels[year]) {
+        const yearLabel = yearLabels[year];
+        const parsedYear = parseInt(yearLabel);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+      
+      const row = { year: actualYear };
       
       catIds.forEach(catId => {
         const cell = dataset.Data({ [yearDimId]: year, [catDimId]: catId });
@@ -91,6 +109,18 @@ export class DataProcessingService {
       return row;
     });
 
+    // Calculate actual years for yearRange
+    const actualYears = years.map(year => {
+      if (yearLabels && yearLabels[year]) {
+        const yearLabel = yearLabels[year];
+        const parsedYear = parseInt(yearLabel);
+        if (!isNaN(parsedYear)) {
+          return parsedYear;
+        }
+      }
+      return Number(year) || year;
+    });
+
     return {
       title: dataset.label || 'Dataset',
       dimensions: [yearDimId, catDimId],
@@ -99,7 +129,7 @@ export class DataProcessingService {
       metadata: {
         totalRecords: rows.length,
         hasCategories: true,
-        yearRange: this._getYearRange(years)
+        yearRange: this._getYearRange(actualYears)
       }
     };
   }
@@ -491,6 +521,72 @@ export class DataProcessingService {
           index: index.toString(),
           label: label
         })) // Provide category mapping with combined region-category labels
+      }
+    };
+  }
+
+  /**
+   * Process water-use-households dataset with actual years
+   * @param {Object} dataset 
+   * @param {Array} years 
+   * @param {string} yearDimId 
+   * @param {Array} otherDims 
+   * @returns {Object}
+   */
+  _processWaterUseHouseholdsSpecial(dataset, years, yearDimId, otherDims) {
+    const catDimId = otherDims[0];
+    const catIds = dataset.Dimension(catDimId).id;
+    const catLabels = this._getCategoryLabels(dataset, catDimId);
+    
+    // Directly get the year values from dataset metadata
+    // Since years are ["0", "1", "2", ...] and we need [2015, 2016, 2017, ...]
+    const yearValueTexts = dataset.Dimension(yearDimId).Category().label;
+    
+    const rows = years.map((year, index) => {
+      // Get the actual year from the valueTexts
+      let actualYear = 2015 + index; // Start from 2015 as per metadata
+      
+      // If we have year labels, try to extract the actual year
+      if (yearValueTexts && yearValueTexts[year]) {
+        const yearText = yearValueTexts[year];
+        const parsedYear = parseInt(yearText);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+      
+      const row = { year: actualYear };
+      
+      catIds.forEach(catId => {
+        const cell = dataset.Data({ [yearDimId]: year, [catDimId]: catId });
+        const label = catLabels[catId] || catId;
+        row[label] = cell ? Number(cell.value) : null;
+      });
+      
+      return row;
+    });
+
+    // Calculate actual years for yearRange
+    const actualYears = years.map((year, index) => {
+      if (yearValueTexts && yearValueTexts[year]) {
+        const yearText = yearValueTexts[year];
+        const parsedYear = parseInt(yearText);
+        if (!isNaN(parsedYear)) {
+          return parsedYear;
+        }
+      }
+      return 2015 + index; // Default mapping
+    });
+
+    return {
+      title: dataset.label || 'წყლის გამოყენება შინამეურნეობებში ერთ სულ მოსახლეზე',
+      dimensions: [yearDimId, catDimId],
+      categories: catIds.map(id => catLabels[id] || id),
+      data: rows,
+      metadata: {
+        totalRecords: rows.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(actualYears)
       }
     };
   }
