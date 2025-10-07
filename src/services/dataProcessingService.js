@@ -470,10 +470,24 @@ export class DataProcessingService {
     const categoryLabels = this._getCategoryLabels(dataset, categoryDim);
 
     const data = [];
+    
+    // Get year labels to convert indices to actual years
+    const yearLabels = this._getCategoryLabels(dataset, yearDimId);
 
-    // Create a row for each valid year with numeric indices
+    // Create a row for each valid year with actual years
     validYears.forEach((year, yearIndex) => {
-      const row = { year: yearIndex.toString() }; // Convert year to numeric index
+      // Get the actual year from the year labels
+      let actualYear = Number(year) || year;
+      
+      if (yearLabels && yearLabels[year]) {
+        const yearLabel = yearLabels[year];
+        const parsedYear = parseInt(yearLabel);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+      
+      const row = { year: actualYear }; // Use actual year instead of numeric index
 
       let seriesIndex = 0;
       // Combine regions and categories to create series
@@ -516,7 +530,18 @@ export class DataProcessingService {
         yearRange: this._getYearRange(validYears),
         dimensionCount: otherDims.length + 1,
         seriesCount: totalSeries,
-        yearMapping: validYears.map((year, index) => ({ index: index.toString(), value: year })), // Provide year mapping
+        yearMapping: validYears.map((year, index) => {
+          // Get actual year from labels
+          let actualYear = year;
+          if (yearLabels && yearLabels[year]) {
+            const yearLabel = yearLabels[year];
+            const parsedYear = parseInt(yearLabel);
+            if (!isNaN(parsedYear)) {
+              actualYear = parsedYear;
+            }
+          }
+          return { index: index.toString(), value: actualYear };
+        }), // Provide year mapping
         categoryMapping: combinedLabels.map((label, index) => ({
           index: index.toString(),
           label: label
