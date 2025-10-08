@@ -26,7 +26,7 @@ export class DataProcessingService {
     } else if (datasetId === 'sewerage-network-population') {
       // Special handling for sewerage-network-population to use actual years
       return this._processSewerageNetworkPopulationSpecial(dataset, years, yearDimId, otherDims);
-    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery') {
+    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery' && datasetId !== 'municipal-waste') {
       // Two dimensions (years + one category) - except for special datasets that need numeric indices
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
@@ -170,6 +170,11 @@ export class DataProcessingService {
     // Special handling for illegal-logging dataset (treat as multi-dimensional)
     if (datasetId === 'illegal-logging') {
       return this._processIllegalLoggingSpecial(dataset, years, yearDimId, otherDims);
+    }
+
+    // Special handling for municipal-waste dataset (treat as multi-dimensional)
+    if (datasetId === 'municipal-waste') {
+      return this._processMunicipalWasteSpecial(dataset, years, yearDimId, otherDims);
     }
 
     // Special handling for forest-planting-recovery dataset (treat as multi-dimensional)
@@ -326,11 +331,25 @@ export class DataProcessingService {
     const indicatorValues = dataset.Dimension(indicatorDim).id;
     const indicatorLabels = this._getCategoryLabels(dataset, indicatorDim);
 
+    // Get year labels to convert indices to actual years
+    const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+
     const data = [];
 
-    // Create a row for each valid year with numeric indices
+    // Create a row for each valid year with actual years
     validYears.forEach((year, yearIndex) => {
-      const row = { year: yearIndex.toString() }; // Convert year to numeric index
+      // Get the actual year from the year labels
+      let actualYear = Number(year) || year;
+      
+      if (yearLabels && yearLabels[year]) {
+        const yearLabel = yearLabels[year];
+        const parsedYear = parseInt(yearLabel);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+      
+      const row = { year: actualYear }; // Use actual year instead of numeric index
 
       indicatorValues.forEach((indicatorId, indicatorIndex) => {
         const queryObj = { [yearDimId]: year, [indicatorDim]: indicatorId };
@@ -341,6 +360,19 @@ export class DataProcessingService {
       data.push(row);
     });
 
+    // Collect actual years for metadata
+    const actualYears = validYears.map(year => {
+      let actualYear = Number(year) || year;
+      if (yearLabels && yearLabels[year]) {
+        const yearLabel = yearLabels[year];
+        const parsedYear = parseInt(yearLabel);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+      return actualYear;
+    });
+
     return {
       title: dataset.label || 'მატერიალური ნაკადების ძირითადი მაჩვენებლები',
       dimensions: [yearDimId, indicatorDim],
@@ -349,14 +381,79 @@ export class DataProcessingService {
       metadata: {
         totalRecords: data.length,
         hasCategories: true,
-        yearRange: this._getYearRange(validYears),
+        yearRange: this._getYearRange(actualYears), // Use actual years for range
         dimensionCount: otherDims.length + 1,
         seriesCount: indicatorValues.length,
-        yearMapping: validYears.map((year, index) => ({ index: index.toString(), value: year })), // Provide year mapping
+        yearMapping: actualYears.map((actualYear, index) => ({ index: index.toString(), value: actualYear })), // Use actual years in mapping
         categoryMapping: indicatorValues.map((indId, index) => ({
           index: index.toString(),
           label: indicatorLabels[indId] || indId
         })) // Provide indicator mapping
+      }
+    };
+  }
+
+  /**
+   * Special processing for municipal-waste dataset with actual years
+   */
+  _processMunicipalWasteSpecial(dataset, years, yearDimId, otherDims) {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && year.toString().trim() !== '');
+
+    // Get the waste categories dimension
+    const wasteDim = otherDims[0];
+    const wasteValues = dataset.Dimension(wasteDim).id;
+    const wasteLabels = this._getCategoryLabels(dataset, wasteDim);
+
+    // Get year labels to convert indices to actual years
+    const yearLabels = this._getCategoryLabels(dataset, yearDimId);    const data = [];
+
+    // Create a row for each valid year with actual years
+    validYears.forEach((year, yearIndex) => {
+      // Municipal waste years mapping: 0->2015, 1->2016, 2->2017, 3->2018, 4->2019, 5->2020, 6->2021, 7->2022
+      const yearMappings = {
+        '0': 2015, '1': 2016, '2': 2017, '3': 2018, 
+        '4': 2019, '5': 2020, '6': 2021, '7': 2022
+      };
+      
+      let actualYear = yearMappings[year] || year;
+      
+      const row = { year: actualYear }; // Use actual year instead of numeric index
+
+      wasteValues.forEach((wasteId, wasteIndex) => {
+        const queryObj = { [yearDimId]: year, [wasteDim]: wasteId };
+        const cell = dataset.Data(queryObj);
+        row[wasteIndex.toString()] = cell ? Number(cell.value) : null; // Use numeric indices for waste categories
+      });
+
+      data.push(row);
+    });
+
+    // Collect actual years for metadata using the same mapping
+    const actualYears = validYears.map(year => {
+      const yearMappings = {
+        '0': 2015, '1': 2016, '2': 2017, '3': 2018, 
+        '4': 2019, '5': 2020, '6': 2021, '7': 2022
+      };
+      return yearMappings[year] || year;
+    });
+
+    return {
+      title: dataset.label || 'ნაგავსაყრელებზე განთავსებული მუნიციპალური ნარჩენები',
+      dimensions: [yearDimId, wasteDim],
+      categories: wasteValues.map((wasteId, index) => index.toString()), // Use numeric indices
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(actualYears), // Use actual years for range
+        dimensionCount: otherDims.length + 1,
+        seriesCount: wasteValues.length,
+        yearMapping: actualYears.map((actualYear, index) => ({ index: index.toString(), value: actualYear })), // Use actual years in mapping
+        categoryMapping: wasteValues.map((wasteId, index) => ({
+          index: index.toString(),
+          label: wasteLabels[wasteId] || wasteId
+        })) // Provide waste category mapping
       }
     };
   }

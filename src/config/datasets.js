@@ -43,14 +43,14 @@ export const DATASETS = {
     id: 'municipal-waste',
     name: 'Municipal Waste',
     description: 'Municipal waste generation and management statistics',
-    path: 'Environment%20Statistics/Waste/01_Municipal_Waste.px',
+    path: 'Environment%20Statistics/Waste/Municipal_Waste.px',
     category: 'environment'
   },
   'waste-recycling': {
     id: 'waste-recycling',
     name: 'Waste Recycling',
     description: 'Waste recycling and recovery statistics',
-    path: 'Environment%20Statistics/Waste/02_Waste_Recycling.px',
+    path: 'Environment%20Statistics/Waste/Waste_Recycling.px',
     category: 'environment'
   },
 
