@@ -177,6 +177,11 @@ export class DataProcessingService {
       return this._processMunicipalWasteSpecial(dataset, years, yearDimId, otherDims);
     }
 
+    // Special handling for forest-fires dataset (treat as multi-dimensional)
+    if (datasetId === 'forest-fires') {
+      return this._processForestFiresSpecial(dataset, years, yearDimId, otherDims);
+    }
+
     // Special handling for forest-planting-recovery dataset (treat as multi-dimensional)
     if (datasetId === 'forest-planting-recovery') {
       return this._processForestPlantingRecoverySpecial(dataset, years, yearDimId, otherDims);
@@ -454,6 +459,103 @@ export class DataProcessingService {
           index: index.toString(),
           label: wasteLabels[wasteId] || wasteId
         })) // Provide waste category mapping
+      }
+    };
+  }
+
+  /**
+   * Special processing for forest-fires dataset with actual years
+   */
+  _processForestFiresSpecial(dataset, years, yearDimId, otherDims) {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && year.toString().trim() !== '');
+
+    // This dataset has 3 dimensions: Year, Regions, and Category
+    const regionDim = otherDims.find(dim => dim.toLowerCase().includes('region')) || otherDims[0];
+    const categoryDim = otherDims.find(dim => dim.toLowerCase().includes('category')) || otherDims[1];
+    
+    const regionValues = dataset.Dimension(regionDim).id;
+    const regionLabels = this._getCategoryLabels(dataset, regionDim);
+    const categoryValues = dataset.Dimension(categoryDim).id;
+    const categoryLabels = this._getCategoryLabels(dataset, categoryDim);
+
+    const data = [];
+
+    // Create a row for each valid year with actual years
+    validYears.forEach((year, yearIndex) => {
+      // Forest fires years mapping: 0->2017, 1->2018, 2->2019, 3->2020, 4->2021, 5->2022, 6->2023
+      const yearMappings = {
+        '0': 2017, '1': 2018, '2': 2019, '3': 2020, 
+        '4': 2021, '5': 2022, '6': 2023
+      };
+      
+      let actualYear = yearMappings[year] || year;
+      const row = { year: actualYear }; // Use actual year instead of numeric index
+      let hasData = false;
+
+      let seriesIndex = 0;
+      // Combine regions and categories to create series
+      regionValues.forEach((regionId) => {
+        categoryValues.forEach((categoryId) => {
+          const queryObj = { 
+            [yearDimId]: year, 
+            [regionDim]: regionId, 
+            [categoryDim]: categoryId 
+          };
+          const cell = dataset.Data(queryObj);
+          const value = cell ? Number(cell.value) : null;
+          
+          // Create combined label for region-category combination
+          const regionLabel = regionLabels[regionId] || regionId;
+          const categoryLabel = categoryLabels[categoryId] || categoryId;
+          row[`${seriesIndex} - ${categoryId}`] = value;
+          
+          if (value !== null && value !== undefined) {
+            hasData = true;
+          }
+          seriesIndex++;
+        });
+      });
+
+      // Only include years that have at least some non-null data
+      if (hasData) {
+        data.push(row);
+      }
+    });
+
+    // Collect actual years for metadata using the same mapping (only for years with data)
+    const yearMappings = {
+      '0': 2017, '1': 2018, '2': 2019, '3': 2020, 
+      '4': 2021, '5': 2022, '6': 2023
+    };
+    const actualYears = data.map(row => row.year);
+
+    // Create combined labels for regions and categories
+    const combinedLabels = [];
+    regionValues.forEach((regionId) => {
+      categoryValues.forEach((categoryId) => {
+        const regionLabel = regionLabels[regionId] || regionId;
+        const categoryLabel = categoryLabels[categoryId] || categoryId;
+        combinedLabels.push(`${regionId} - ${categoryId}`);
+      });
+    });
+
+    return {
+      title: dataset.label || 'ტყისა და ველის ხანძრები რეგიონების მიხედვით',
+      dimensions: [yearDimId, regionDim, categoryDim],
+      categories: combinedLabels,
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(actualYears), // Use actual years for range
+        dimensionCount: otherDims.length + 1,
+        seriesCount: combinedLabels.length,
+        yearMapping: actualYears.map((actualYear, index) => ({ index: index.toString(), value: actualYear })), // Use actual years in mapping
+        categoryMapping: combinedLabels.map((label, index) => ({
+          index: index.toString(),
+          label: label
+        })) // Provide category mapping
       }
     };
   }
