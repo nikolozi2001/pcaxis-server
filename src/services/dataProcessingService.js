@@ -26,7 +26,7 @@ export class DataProcessingService {
     } else if (datasetId === 'sewerage-network-population') {
       // Special handling for sewerage-network-population to use actual years
       return this._processSewerageNetworkPopulationSpecial(dataset, years, yearDimId, otherDims);
-    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery' && datasetId !== 'municipal-waste') {
+    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery' && datasetId !== 'municipal-waste' && datasetId !== 'geological-phenomena') {
       // Two dimensions (years + one category) - except for special datasets that need numeric indices
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
@@ -185,6 +185,11 @@ export class DataProcessingService {
     // Special handling for forest-planting-recovery dataset (treat as multi-dimensional)
     if (datasetId === 'forest-planting-recovery') {
       return this._processForestPlantingRecoverySpecial(dataset, years, yearDimId, otherDims);
+    }
+
+    // Special handling for geological-phenomena dataset (treat as multi-dimensional)
+    if (datasetId === 'geological-phenomena') {
+      return this._processGeologicalPhenomenaSpecial(dataset, years, yearDimId, otherDims);
     }
 
     // Default processing for other datasets
@@ -1054,6 +1059,63 @@ export class DataProcessingService {
       source: metadata.source || null,
       note: metadata.note || null,
       language: metadata.language || 'ka'
+    };
+  }
+
+  _processGeologicalPhenomenaSpecial(dataset, years, yearDimId, otherDims) {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && year.toString().trim() !== '');
+
+    // Get the geological phenomena dimension
+    const phenomenaDim = otherDims[0]; // Should be "Geological phenomena"
+    const phenomenaValues = dataset.Dimension(phenomenaDim).id;
+    const phenomenaLabels = this._getCategoryLabels(dataset, phenomenaDim);
+
+    const data = [];
+
+    // Create a row for each valid year with actual years
+    validYears.forEach((year, yearIndex) => {
+      // Geological phenomena years mapping: 0->1995, 1->1996, ..., 28->2023
+      const actualYear = 1995 + parseInt(year);
+      const row = { year: actualYear }; // Use actual year instead of numeric index
+      let hasData = false;
+
+      // For each geological phenomenon type, get the data
+      phenomenaValues.forEach((phenomenaId) => {
+        const queryObj = { 
+          [yearDimId]: year, 
+          [phenomenaDim]: phenomenaId
+        };
+        const cell = dataset.Data(queryObj);
+        const value = cell ? Number(cell.value) : null;
+        
+        // Use the phenomenon label as the key
+        const phenomenaLabel = phenomenaLabels[phenomenaId] || phenomenaId;
+        row[phenomenaLabel] = value;
+        
+        if (value !== null && value !== undefined) {
+          hasData = true;
+        }
+      });
+
+      // Only include years that have at least some non-null data
+      if (hasData) {
+        data.push(row);
+      }
+    });
+
+    // Create series information for the chart
+    const series = phenomenaValues.map(value => ({
+      key: phenomenaLabels[value] || value,
+      name: phenomenaLabels[value] || value,
+      dataKey: phenomenaLabels[value] || value
+    }));
+
+    return {
+      data,
+      series,
+      xAxisKey: 'year',
+      title: dataset.title || 'Geological Phenomena Data'
     };
   }
 }
