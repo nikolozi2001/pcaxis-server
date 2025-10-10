@@ -27,7 +27,7 @@ export class DataProcessingService {
     } else if (datasetId === 'sewerage-network-population') {
       // Special handling for sewerage-network-population to use actual years
       return this._processSewerageNetworkPopulationSpecial(dataset, years, yearDimId, otherDims);
-    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery' && datasetId !== 'municipal-waste' && datasetId !== 'geological-phenomena' && datasetId !== 'final-energy-consumption' && datasetId !== 'primary-energy-supply') {
+    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery' && datasetId !== 'municipal-waste' && datasetId !== 'geological-phenomena' && datasetId !== 'final-energy-consumption' && datasetId !== 'primary-energy-supply' && datasetId !== 'energy-intensity') {
       // Two dimensions (years + one category) - except for special datasets that need numeric indices
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
@@ -186,6 +186,11 @@ export class DataProcessingService {
     // Special handling for forest-planting-recovery dataset (treat as multi-dimensional)
     if (datasetId === 'forest-planting-recovery') {
       return this._processForestPlantingRecoverySpecial(dataset, years, yearDimId, otherDims);
+    }
+
+    // Special handling for energy-intensity dataset (treat as multi-dimensional)
+    if (datasetId === 'energy-intensity') {
+      return this._processEnergyIntensitySpecial(dataset, years, yearDimId, otherDims, lang);
     }
 
     // Special handling for primary-energy-supply dataset (treat as multi-dimensional)
@@ -1095,6 +1100,18 @@ export class DataProcessingService {
           originalValues.push(originalValues.length.toString());
         }
         
+        // Special handling for energy-intensity dataset to add calculated field
+        if (datasetId === 'energy-intensity' && v.code === 'Energy intensity') {
+          // Add the calculated field to valueTexts based on language
+          const calculatedFieldText = lang === 'en' 
+            ? 'Annual change'
+            : 'წლიური ცვლილება';
+          
+          valueTexts = [...valueTexts, calculatedFieldText];
+          // Add corresponding values index
+          originalValues.push(originalValues.length.toString());
+        }
+
         // Special handling for primary-energy-supply dataset to add calculated fields
         if (datasetId === 'primary-energy-supply' && v.code === 'Primary Energy Supply') {
           // Add the first calculated field (renewable energy) to valueTexts based on language
@@ -1194,6 +1211,114 @@ export class DataProcessingService {
       series,
       xAxisKey: 'year',
       title: dataset.title || 'Geological Phenomena Data'
+    };
+  }
+
+  _processEnergyIntensitySpecial(dataset, years, yearDimId, otherDims, lang = 'ka') {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && year.toString().trim() !== '');
+
+    // Get the intensity dimension
+    const intensityDim = otherDims[0]; // Should be "Energy intensity"
+    const intensityValues = dataset.Dimension(intensityDim).id;
+    const intensityLabels = this._getCategoryLabels(dataset, intensityDim);
+
+    const data = [];
+
+    // Create a row for each valid year with actual years
+    validYears.forEach((year, yearIndex) => {
+      // Get year labels to convert indices to actual years
+      const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+      let actualYear = Number(year) || year;
+      
+      if (yearLabels && yearLabels[year]) {
+        const yearLabel = yearLabels[year];
+        const parsedYear = parseInt(yearLabel);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+
+      const row = { year: actualYear }; // Use actual year instead of numeric index
+
+      intensityValues.forEach((intensityId, intensityIndex) => {
+        const queryObj = { [yearDimId]: year, [intensityDim]: intensityId };
+        const cell = dataset.Data(queryObj);
+        row[intensityIndex.toString()] = cell ? Number(cell.value) : null; // Use numeric indices
+      });
+
+      // Calculate annual change for "ენერგოინტენსიურობა პირველადი ენერგიის მთლიან მიწოდებაში, ტნე/მლნ. საერ. დოლარი" (index 4)
+      const currentValue = row['4'];
+      let annualChange = null;
+
+      // Only calculate if we have current value and this is not the first year
+      if (currentValue !== null && yearIndex > 0) {
+        // Get the previous year's value
+        const previousYearIndex = validYears[yearIndex - 1];
+        const previousQueryObj = { [yearDimId]: previousYearIndex, [intensityDim]: intensityValues[4] };
+        const previousCell = dataset.Data(previousQueryObj);
+        const previousValue = previousCell ? Number(previousCell.value) : null;
+
+        if (previousValue !== null && previousValue !== 0) {
+          // Formula: ((current / previous) * 100) - 100
+          annualChange = ((currentValue / previousValue) * 100) - 100;
+        }
+      }
+
+      const calculatedIndex = intensityValues.length; // Next available index
+      row[calculatedIndex.toString()] = annualChange;
+
+      data.push(row);
+    });
+
+    // Collect actual years for metadata
+    const actualYears = validYears.map(year => {
+      let actualYear = Number(year) || year;
+      const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+      if (yearLabels && yearLabels[year]) {
+        const yearLabel = yearLabels[year];
+        const parsedYear = parseInt(yearLabel);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+      return actualYear;
+    });
+
+    // Create categories including the calculated field
+    const allCategories = intensityValues.map((intId, index) => index.toString());
+    allCategories.push(intensityValues.length.toString()); // Add annual change field index
+
+    // Create category mapping including the calculated field
+    const categoryMapping = intensityValues.map((intId, index) => ({
+      index: index.toString(),
+      label: intensityLabels[intId] || intId
+    }));
+    
+    // Add the calculated field to category mapping with language support
+    const calculatedFieldLabel = lang === 'en' 
+      ? 'Annual change'
+      : 'წლიური ცვლილება';
+    
+    categoryMapping.push({
+      index: intensityValues.length.toString(),
+      label: calculatedFieldLabel
+    });
+
+    return {
+      title: dataset.label || 'ენერგოინტენსიურობა',
+      dimensions: [yearDimId, intensityDim],
+      categories: allCategories, // Include calculated field
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(actualYears), // Use actual years for range
+        dimensionCount: otherDims.length + 1,
+        seriesCount: intensityValues.length + 1, // Include calculated field
+        yearMapping: actualYears.map((actualYear, index) => ({ index: index.toString(), value: actualYear })), // Use actual years in mapping
+        categoryMapping: categoryMapping // Include calculated field mapping
+      }
     };
   }
 
