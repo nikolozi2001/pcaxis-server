@@ -1104,8 +1104,8 @@ export class DataProcessingService {
         if (datasetId === 'energy-intensity' && v.code === 'Energy intensity') {
           // Add the calculated field to valueTexts based on language
           const calculatedFieldText = lang === 'en' 
-            ? 'Annual change'
-            : 'წლიური ცვლილება';
+            ? 'Annual change, %'
+            : 'წლიური ცვლილება, %';
           
           valueTexts = [...valueTexts, calculatedFieldText];
           // Add corresponding values index
@@ -1297,9 +1297,9 @@ export class DataProcessingService {
     
     // Add the calculated field to category mapping with language support
     const calculatedFieldLabel = lang === 'en' 
-      ? 'Annual change'
-      : 'წლიური ცვლილება';
-    
+      ? 'Annual change, %'
+      : 'წლიური ცვლილება, %';
+
     categoryMapping.push({
       index: intensityValues.length.toString(),
       label: calculatedFieldLabel
