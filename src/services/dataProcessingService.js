@@ -367,6 +367,12 @@ export class DataProcessingService {
         row[indicatorIndex.toString()] = cell ? Number(cell.value) : null; // Use numeric indices for indicators
       });
 
+      // Add calculated field: "სხვა მოპოვება" = "ადგილობრივი მოპოვება" (index 0) - "ბიომასა" (index 1)
+      const domesticExtraction = row['0'] || 0;
+      const biomass = row['1'] || 0;
+      const calculatedIndex = indicatorValues.length; // Next available index
+      row[calculatedIndex.toString()] = domesticExtraction - biomass;
+
       data.push(row);
     });
 
@@ -383,22 +389,35 @@ export class DataProcessingService {
       return actualYear;
     });
 
+    // Create categories including the calculated field
+    const allCategories = indicatorValues.map((indId, index) => index.toString());
+    allCategories.push(indicatorValues.length.toString()); // Add calculated field index
+
+    // Create category mapping including the calculated field
+    const categoryMapping = indicatorValues.map((indId, index) => ({
+      index: index.toString(),
+      label: indicatorLabels[indId] || indId
+    }));
+    
+    // Add the calculated field to category mapping
+    categoryMapping.push({
+      index: indicatorValues.length.toString(),
+      label: 'სხვა მოპოვება (მინერალები, წიაღისეული საწვავი)' // Georgian
+    });
+
     return {
       title: dataset.label || 'მატერიალური ნაკადების ძირითადი მაჩვენებლები',
       dimensions: [yearDimId, indicatorDim],
-      categories: indicatorValues.map((indId, index) => index.toString()), // Use numeric indices
+      categories: allCategories, // Include calculated field
       data: data,
       metadata: {
         totalRecords: data.length,
         hasCategories: true,
         yearRange: this._getYearRange(actualYears), // Use actual years for range
         dimensionCount: otherDims.length + 1,
-        seriesCount: indicatorValues.length,
+        seriesCount: indicatorValues.length + 1, // Include calculated field
         yearMapping: actualYears.map((actualYear, index) => ({ index: index.toString(), value: actualYear })), // Use actual years in mapping
-        categoryMapping: indicatorValues.map((indId, index) => ({
-          index: index.toString(),
-          label: indicatorLabels[indId] || indId
-        })) // Provide indicator mapping
+        categoryMapping: categoryMapping // Include calculated field mapping
       }
     };
   }
@@ -1041,17 +1060,27 @@ export class DataProcessingService {
    * @param {Object} metadata 
    * @returns {Object}
    */
-  processMetadata(metadata) {
+  processMetadata(metadata, datasetId = null) {
     return {
       title: metadata.title || 'Unknown Dataset',
       variables: metadata.variables?.map(v => {
         // For protected areas datasets, keep the original valueTexts (which should be in the correct language)
         const originalValues = v.values || [];
+        let valueTexts = v.valueTexts || [];
+        
+        // Special handling for material-flow-indicators dataset to add calculated field
+        if (datasetId === 'material-flow-indicators' && v.code === 'Indicators') {
+          // Add the calculated field to valueTexts
+          valueTexts = [...valueTexts, 'სხვა მოპოვება (მინერალები, წიაღისეული საწვავი)'];
+          // Add corresponding values index
+          originalValues.push(originalValues.length.toString());
+        }
+        
         return {
           code: v.code,
           text: v.text,
           values: originalValues.map((_, index) => index.toString()), // Convert to string indices
-          valueTexts: v.valueTexts || [], // Keep original valueTexts from PXWeb API
+          valueTexts: valueTexts, // Include modified valueTexts for material-flow-indicators
           time: v.time || false
         };
       }) || [],
