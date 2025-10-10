@@ -27,7 +27,7 @@ export class DataProcessingService {
     } else if (datasetId === 'sewerage-network-population') {
       // Special handling for sewerage-network-population to use actual years
       return this._processSewerageNetworkPopulationSpecial(dataset, years, yearDimId, otherDims);
-    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery' && datasetId !== 'municipal-waste' && datasetId !== 'geological-phenomena' && datasetId !== 'final-energy-consumption') {
+    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery' && datasetId !== 'municipal-waste' && datasetId !== 'geological-phenomena' && datasetId !== 'final-energy-consumption' && datasetId !== 'primary-energy-supply') {
       // Two dimensions (years + one category) - except for special datasets that need numeric indices
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
@@ -186,6 +186,11 @@ export class DataProcessingService {
     // Special handling for forest-planting-recovery dataset (treat as multi-dimensional)
     if (datasetId === 'forest-planting-recovery') {
       return this._processForestPlantingRecoverySpecial(dataset, years, yearDimId, otherDims);
+    }
+
+    // Special handling for primary-energy-supply dataset (treat as multi-dimensional)
+    if (datasetId === 'primary-energy-supply') {
+      return this._processPrimaryEnergySupplySpecial(dataset, years, yearDimId, otherDims, lang);
     }
 
     // Special handling for final-energy-consumption dataset (treat as multi-dimensional)
@@ -1090,6 +1095,24 @@ export class DataProcessingService {
           originalValues.push(originalValues.length.toString());
         }
         
+        // Special handling for primary-energy-supply dataset to add calculated fields
+        if (datasetId === 'primary-energy-supply' && v.code === 'Primary Energy Supply') {
+          // Add the first calculated field (renewable energy) to valueTexts based on language
+          const renewableFieldText = lang === 'en' 
+            ? 'Renewable energy'
+            : 'განახლებადი ენერგია';
+          
+          // Add the second calculated field (other) to valueTexts based on language
+          const otherFieldText = lang === 'en' 
+            ? 'Other'
+            : 'სხვა';
+          
+          valueTexts = [...valueTexts, renewableFieldText, otherFieldText];
+          // Add corresponding values indices
+          originalValues.push(originalValues.length.toString());
+          originalValues.push(originalValues.length.toString());
+        }
+
         // Special handling for final-energy-consumption dataset to add calculated field
         if (datasetId === 'final-energy-consumption' && v.code === 'Final energy consumption') {
           // Add the calculated field to valueTexts based on language
@@ -1171,6 +1194,122 @@ export class DataProcessingService {
       series,
       xAxisKey: 'year',
       title: dataset.title || 'Geological Phenomena Data'
+    };
+  }
+
+  _processPrimaryEnergySupplySpecial(dataset, years, yearDimId, otherDims, lang = 'ka') {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && year.toString().trim() !== '');
+
+    // Get the supply dimension
+    const supplyDim = otherDims[0]; // Should be "Primary Energy Supply"
+    const supplyValues = dataset.Dimension(supplyDim).id;
+    const supplyLabels = this._getCategoryLabels(dataset, supplyDim);
+
+    const data = [];
+
+    // Create a row for each valid year with actual years
+    validYears.forEach((year, yearIndex) => {
+      // Get year labels to convert indices to actual years
+      const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+      let actualYear = Number(year) || year;
+      
+      if (yearLabels && yearLabels[year]) {
+        const yearLabel = yearLabels[year];
+        const parsedYear = parseInt(yearLabel);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+
+      const row = { year: actualYear }; // Use actual year instead of numeric index
+
+      supplyValues.forEach((supplyId, supplyIndex) => {
+        const queryObj = { [yearDimId]: year, [supplyDim]: supplyId };
+        const cell = dataset.Data(queryObj);
+        row[supplyIndex.toString()] = cell ? Number(cell.value) : null; // Use numeric indices
+      });
+
+      // Add calculated field 1: "განახლებადი ენერგია" = index 11 + index 12 + index 14
+      // Index 11: "ჰიდროენერგიის მიწოდება, 1000 ტნე"
+      // Index 12: "გეოთერმული, მზის და სხვა ენერგიის მიწოდება, 1000 ტნე"
+      // Index 14: "ბიოსაწვავისა და ნარჩენების მიწოდება, 1000 ტნე"
+      const hydro = row['11'] || 0;
+      const geothermal = row['12'] || 0;
+      const biofuel = row['14'] || 0;
+      const renewableIndex = supplyValues.length; // Next available index
+      row[renewableIndex.toString()] = hydro + geothermal + biofuel;
+
+      // Add calculated field 2: "სხვა" = index 7 + index 13
+      // Index 7: "ნედლი ნავთობის მიწოდება, 1000 ტნე"
+      // Index 13: "ელექტროენერგიის მიწოდება, 1000 ტნე"
+      const crudeOil = row['7'] || 0;
+      const electricity = row['13'] || 0;
+      const otherIndex = supplyValues.length + 1; // Next available index after renewable
+      row[otherIndex.toString()] = crudeOil + electricity;
+
+      data.push(row);
+    });
+
+    // Collect actual years for metadata
+    const actualYears = validYears.map(year => {
+      let actualYear = Number(year) || year;
+      const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+      if (yearLabels && yearLabels[year]) {
+        const yearLabel = yearLabels[year];
+        const parsedYear = parseInt(yearLabel);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+      return actualYear;
+    });
+
+    // Create categories including the calculated fields
+    const allCategories = supplyValues.map((supId, index) => index.toString());
+    allCategories.push(supplyValues.length.toString()); // Add renewable energy field index
+    allCategories.push((supplyValues.length + 1).toString()); // Add other field index
+
+    // Create category mapping including the calculated fields
+    const categoryMapping = supplyValues.map((supId, index) => ({
+      index: index.toString(),
+      label: supplyLabels[supId] || supId
+    }));
+    
+    // Add the first calculated field to category mapping with language support
+    const renewableFieldLabel = lang === 'en' 
+      ? 'Renewable energy'
+      : 'განახლებადი ენერგია';
+    
+    categoryMapping.push({
+      index: supplyValues.length.toString(),
+      label: renewableFieldLabel
+    });
+
+    // Add the second calculated field to category mapping with language support
+    const otherFieldLabel = lang === 'en' 
+      ? 'Other'
+      : 'სხვა';
+    
+    categoryMapping.push({
+      index: (supplyValues.length + 1).toString(),
+      label: otherFieldLabel
+    });
+
+    return {
+      title: dataset.label || 'პირველადი ენერგიის ჯამური მიწოდება',
+      dimensions: [yearDimId, supplyDim],
+      categories: allCategories, // Include calculated fields
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(actualYears), // Use actual years for range
+        dimensionCount: otherDims.length + 1,
+        seriesCount: supplyValues.length + 2, // Include both calculated fields
+        yearMapping: actualYears.map((actualYear, index) => ({ index: index.toString(), value: actualYear })), // Use actual years in mapping
+        categoryMapping: categoryMapping // Include calculated fields mapping
+      }
     };
   }
 
