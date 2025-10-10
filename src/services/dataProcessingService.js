@@ -27,7 +27,7 @@ export class DataProcessingService {
     } else if (datasetId === 'sewerage-network-population') {
       // Special handling for sewerage-network-population to use actual years
       return this._processSewerageNetworkPopulationSpecial(dataset, years, yearDimId, otherDims);
-    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery' && datasetId !== 'municipal-waste' && datasetId !== 'geological-phenomena') {
+    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery' && datasetId !== 'municipal-waste' && datasetId !== 'geological-phenomena' && datasetId !== 'final-energy-consumption') {
       // Two dimensions (years + one category) - except for special datasets that need numeric indices
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
@@ -186,6 +186,11 @@ export class DataProcessingService {
     // Special handling for forest-planting-recovery dataset (treat as multi-dimensional)
     if (datasetId === 'forest-planting-recovery') {
       return this._processForestPlantingRecoverySpecial(dataset, years, yearDimId, otherDims);
+    }
+
+    // Special handling for final-energy-consumption dataset (treat as multi-dimensional)
+    if (datasetId === 'final-energy-consumption') {
+      return this._processFinalEnergyConsumptionSpecial(dataset, years, yearDimId, otherDims, lang);
     }
 
     // Special handling for geological-phenomena dataset (treat as multi-dimensional)
@@ -1085,6 +1090,18 @@ export class DataProcessingService {
           originalValues.push(originalValues.length.toString());
         }
         
+        // Special handling for final-energy-consumption dataset to add calculated field
+        if (datasetId === 'final-energy-consumption' && v.code === 'Final energy consumption') {
+          // Add the calculated field to valueTexts based on language
+          const calculatedFieldText = lang === 'en' 
+            ? 'Agriculture and other'
+            : 'სოფ.მეურნეობა და სხვა';
+          
+          valueTexts = [...valueTexts, calculatedFieldText];
+          // Add corresponding values index
+          originalValues.push(originalValues.length.toString());
+        }
+        
         return {
           code: v.code,
           text: v.text,
@@ -1154,6 +1171,101 @@ export class DataProcessingService {
       series,
       xAxisKey: 'year',
       title: dataset.title || 'Geological Phenomena Data'
+    };
+  }
+
+  _processFinalEnergyConsumptionSpecial(dataset, years, yearDimId, otherDims, lang = 'ka') {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && year.toString().trim() !== '');
+
+    // Get the consumption dimension
+    const consumptionDim = otherDims[0]; // Should be "Final energy consumption"
+    const consumptionValues = dataset.Dimension(consumptionDim).id;
+    const consumptionLabels = this._getCategoryLabels(dataset, consumptionDim);
+
+    const data = [];
+
+    // Create a row for each valid year with actual years
+    validYears.forEach((year, yearIndex) => {
+      // Get year labels to convert indices to actual years
+      const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+      let actualYear = Number(year) || year;
+      
+      if (yearLabels && yearLabels[year]) {
+        const yearLabel = yearLabels[year];
+        const parsedYear = parseInt(yearLabel);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+
+      const row = { year: actualYear }; // Use actual year instead of numeric index
+
+      consumptionValues.forEach((consumptionId, consumptionIndex) => {
+        const queryObj = { [yearDimId]: year, [consumptionDim]: consumptionId };
+        const cell = dataset.Data(queryObj);
+        row[consumptionIndex.toString()] = cell ? Number(cell.value) : null; // Use numeric indices
+      });
+
+      // Add calculated field: "სოფ.მეურნეობა და სხვა" = index 9 + index 11
+      // Index 9: "სოფლის მეურნეობა, სატყეო მეურნეობა და თევზჭერა, ათასი ტნე"
+      // Index 11: "სხვა, ათასი ტნე"
+      const agriculture = row['9'] || 0;
+      const other = row['11'] || 0;
+      const calculatedIndex = consumptionValues.length; // Next available index
+      row[calculatedIndex.toString()] = agriculture + other;
+
+      data.push(row);
+    });
+
+    // Collect actual years for metadata
+    const actualYears = validYears.map(year => {
+      let actualYear = Number(year) || year;
+      const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+      if (yearLabels && yearLabels[year]) {
+        const yearLabel = yearLabels[year];
+        const parsedYear = parseInt(yearLabel);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+      return actualYear;
+    });
+
+    // Create categories including the calculated field
+    const allCategories = consumptionValues.map((consId, index) => index.toString());
+    allCategories.push(consumptionValues.length.toString()); // Add calculated field index
+
+    // Create category mapping including the calculated field
+    const categoryMapping = consumptionValues.map((consId, index) => ({
+      index: index.toString(),
+      label: consumptionLabels[consId] || consId
+    }));
+    
+    // Add the calculated field to category mapping with language support
+    const calculatedFieldLabel = lang === 'en' 
+      ? 'Agriculture and other'
+      : 'სოფ.მეურნეობა და სხვა';
+    
+    categoryMapping.push({
+      index: consumptionValues.length.toString(),
+      label: calculatedFieldLabel
+    });
+
+    return {
+      title: dataset.label || 'ენერგიის საბოლოო მოხმარება',
+      dimensions: [yearDimId, consumptionDim],
+      categories: allCategories, // Include calculated field
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(actualYears), // Use actual years for range
+        dimensionCount: otherDims.length + 1,
+        seriesCount: consumptionValues.length + 1, // Include calculated field
+        yearMapping: actualYears.map((actualYear, index) => ({ index: index.toString(), value: actualYear })), // Use actual years in mapping
+        categoryMapping: categoryMapping // Include calculated field mapping
+      }
     };
   }
 }
