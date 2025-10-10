@@ -79,7 +79,7 @@ export class DatasetController {
       
       // Fetch metadata in the requested language
       const { metadata } = await pxwebService.fetchData(dataset.path, lang);
-      const processedMetadata = dataProcessingService.processMetadata(metadata, id);
+      const processedMetadata = dataProcessingService.processMetadata(metadata, id, lang);
 
       res.json({
         success: true,
@@ -123,7 +123,7 @@ export class DatasetController {
 
       const dataset = DATASETS[id];
       const { dataset: jsonStatDataset } = await pxwebService.fetchData(dataset.path, lang);
-      const processedData = dataProcessingService.processForChart(jsonStatDataset, id); // Pass dataset ID
+      const processedData = dataProcessingService.processForChart(jsonStatDataset, id, lang); // Pass dataset ID and language
 
       res.json({
         success: true,

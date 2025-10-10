@@ -7,9 +7,10 @@ export class DataProcessingService {
    * Process dataset into chart-friendly format
    * @param {Object} dataset - JSON-Stat dataset
    * @param {string} datasetId - Dataset identifier for special handling
+   * @param {string} lang - Language code ('ka' or 'en')
    * @returns {Object} - Processed data for charts
    */
-  processForChart(dataset, datasetId = null) {
+  processForChart(dataset, datasetId = null, lang = 'ka') {
     const dimIds = dataset.id;
     const yearDimId = this._findYearDimension(dimIds);
     const otherDims = dimIds.filter(d => d !== yearDimId);
@@ -31,7 +32,7 @@ export class DataProcessingService {
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
       // Three or more dimensions (complex multi-dimensional data) OR datasets requiring numeric indices
-      return this._processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId);
+      return this._processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId, lang);
     }
   }
 
@@ -146,7 +147,7 @@ export class DataProcessingService {
    * @param {string} datasetId - Dataset identifier for special handling
    * @returns {Object}
    */
-  _processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId = null) {
+  _processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId = null, lang = 'ka') {
     // Special handling for stationary-source-pollution dataset
     if (datasetId === 'stationary-source-pollution') {
       return this._processStationarySourcePollution(dataset, years, yearDimId, otherDims);
@@ -159,7 +160,7 @@ export class DataProcessingService {
 
     // Special handling for material-flow-indicators dataset (treat as multi-dimensional)
     if (datasetId === 'material-flow-indicators') {
-      return this._processMaterialFlowIndicatorsSpecial(dataset, years, yearDimId, otherDims);
+      return this._processMaterialFlowIndicatorsSpecial(dataset, years, yearDimId, otherDims, lang);
     }
 
     // Special handling for felled-timber-volume dataset (treat as multi-dimensional)
@@ -332,7 +333,7 @@ export class DataProcessingService {
   /**
    * Special processing for material-flow-indicators dataset with numeric indices
    */
-  _processMaterialFlowIndicatorsSpecial(dataset, years, yearDimId, otherDims) {
+  _processMaterialFlowIndicatorsSpecial(dataset, years, yearDimId, otherDims, lang = 'ka') {
     // Filter out empty years first
     const validYears = years.filter(year => year && year.toString().trim() !== '');
 
@@ -399,10 +400,14 @@ export class DataProcessingService {
       label: indicatorLabels[indId] || indId
     }));
     
-    // Add the calculated field to category mapping
+    // Add the calculated field to category mapping with language support
+    const calculatedFieldLabel = lang === 'en' 
+      ? 'Other extraction (minerals, fossil fuels)'
+      : 'სხვა მოპოვება (მინერალები, წიაღისეული საწვავი)';
+    
     categoryMapping.push({
       index: indicatorValues.length.toString(),
-      label: 'სხვა მოპოვება (მინერალები, წიაღისეული საწვავი)' // Georgian
+      label: calculatedFieldLabel
     });
 
     return {
@@ -1060,7 +1065,7 @@ export class DataProcessingService {
    * @param {Object} metadata 
    * @returns {Object}
    */
-  processMetadata(metadata, datasetId = null) {
+  processMetadata(metadata, datasetId = null, lang = 'ka') {
     return {
       title: metadata.title || 'Unknown Dataset',
       variables: metadata.variables?.map(v => {
@@ -1070,8 +1075,12 @@ export class DataProcessingService {
         
         // Special handling for material-flow-indicators dataset to add calculated field
         if (datasetId === 'material-flow-indicators' && v.code === 'Indicators') {
-          // Add the calculated field to valueTexts
-          valueTexts = [...valueTexts, 'სხვა მოპოვება (მინერალები, წიაღისეული საწვავი)'];
+          // Add the calculated field to valueTexts based on language
+          const calculatedFieldText = lang === 'en' 
+            ? 'Other extraction (minerals, fossil fuels)'
+            : 'სხვა მოპოვება (მინერალები, წიაღისეული საწვავი)';
+          
+          valueTexts = [...valueTexts, calculatedFieldText];
           // Add corresponding values index
           originalValues.push(originalValues.length.toString());
         }
@@ -1087,7 +1096,7 @@ export class DataProcessingService {
       updated: metadata.updated || null,
       source: metadata.source || null,
       note: metadata.note || null,
-      language: metadata.language || 'ka'
+      language: metadata.language || lang
     };
   }
 
