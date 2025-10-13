@@ -459,20 +459,31 @@ export class DataProcessingService {
     const wasteValues = dataset.Dimension(wasteDim).id;
     const wasteLabels = this._getCategoryLabels(dataset, wasteDim);
 
-    // Get year labels to convert indices to actual years
-    const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+    // Get year values to convert indices to actual years dynamically
+    const yearValues = this._getCategoryValues(dataset, yearDimId);
     
     const data = [];
 
     // Create a row for each valid year with actual years
     validYears.forEach((year, yearIndex) => {
-      // Municipal waste years mapping: 0->2015, 1->2016, 2->2017, 3->2018, 4->2019, 5->2020, 6->2021, 7->2022
-      const yearMappings = {
-        '0': 2015, '1': 2016, '2': 2017, '3': 2018, 
-        '4': 2019, '5': 2020, '6': 2021, '7': 2022
-      };
+      // Get the actual year from the year values array (dynamic approach)
+      let actualYear = Number(year) || year;
       
-      let actualYear = yearMappings[year] || year;
+      // First try dynamic approach
+      if (yearValues && yearValues.length > 0 && yearValues[yearIndex]) {
+        const yearValue = yearValues[yearIndex];
+        const parsedYear = parseInt(yearValue);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      } else {
+        // Fallback: Use known municipal waste year range (2015-2022 for indices 0-7)
+        // This handles the case where dynamic mapping fails
+        const municipalWasteYearStart = 2015;
+        if (yearIndex !== undefined && yearIndex >= 0) {
+          actualYear = municipalWasteYearStart + yearIndex;
+        }
+      }
       
       const row = { year: actualYear }; // Use actual year instead of numeric index
 
@@ -506,13 +517,16 @@ export class DataProcessingService {
       data.push(row);
     });
 
-    // Collect actual years for metadata using the same mapping
-    const actualYears = validYears.map(year => {
-      const yearMappings = {
-        '0': 2015, '1': 2016, '2': 2017, '3': 2018, 
-        '4': 2019, '5': 2020, '6': 2021, '7': 2022
-      };
-      return yearMappings[year] || year;
+    // Collect actual years for metadata using dynamic mapping
+    const actualYears = validYears.map((year, yearIndex) => {
+      if (yearValues && yearValues[yearIndex]) {
+        const yearValue = yearValues[yearIndex];
+        const parsedYear = parseInt(yearValue);
+        if (!isNaN(parsedYear)) {
+          return parsedYear;
+        }
+      }
+      return Number(year) || year;
     });
 
     // Add calculated field labels
@@ -567,21 +581,26 @@ export class DataProcessingService {
     const fertilizerValues = dataset.Dimension(fertilizerDim).id;
     const fertilizerLabels = this._getCategoryLabels(dataset, fertilizerDim);
 
-    // Get year labels to convert indices to actual years
-    const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+    // Get year values to convert indices to actual years dynamically
+    const yearValues = this._getCategoryValues(dataset, yearDimId);
     
     const data = [];
 
     // Create a row for each valid year with actual years
     validYears.forEach((year, yearIndex) => {
-      // Fertilizer use years mapping: 0->2006, 1->2007, ..., 18->2024
-      const yearMappings = {
-        '0': 2006, '1': 2007, '2': 2008, '3': 2009, '4': 2010, '5': 2011, 
-        '6': 2012, '7': 2013, '8': 2014, '9': 2015, '10': 2016, '11': 2017, 
-        '12': 2018, '13': 2019, '14': 2020, '15': 2021, '16': 2022, '17': 2023, '18': 2024
-      };
+      // Get the actual year from the year values array (dynamic approach)
+      let actualYear = Number(year) || year;
       
-      let actualYear = yearMappings[year] || year;
+      if (yearValues && yearValues[yearIndex]) {
+        const yearValue = yearValues[yearIndex];
+        const parsedYear = parseInt(yearValue);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      } else {
+        // For fertilizer use, if dynamic approach fails, use known mapping (2006-2024)
+        actualYear = 2006 + yearIndex;
+      }
       
       const row = { year: actualYear }; // Use actual year instead of numeric index
 
@@ -614,14 +633,16 @@ export class DataProcessingService {
       data.push(row);
     });
 
-    // Collect actual years for metadata using the same mapping
-    const actualYears = validYears.map(year => {
-      const yearMappings = {
-        '0': 2006, '1': 2007, '2': 2008, '3': 2009, '4': 2010, '5': 2011, 
-        '6': 2012, '7': 2013, '8': 2014, '9': 2015, '10': 2016, '11': 2017, 
-        '12': 2018, '13': 2019, '14': 2020, '15': 2021, '16': 2022, '17': 2023, '18': 2024
-      };
-      return yearMappings[year] || year;
+    // Collect actual years for metadata using dynamic mapping
+    const actualYears = validYears.map((year, yearIndex) => {
+      if (yearValues && yearValues[yearIndex]) {
+        const yearValue = yearValues[yearIndex];
+        const parsedYear = parseInt(yearValue);
+        if (!isNaN(parsedYear)) {
+          return parsedYear;
+        }
+      }
+      return Number(year) || year;
     });
 
     // Add calculated field labels
@@ -1230,6 +1251,41 @@ export class DataProcessingService {
     
     const category = dataset.Dimension(catDimId).Category();
     return category?.label || {};
+  }
+
+  /**
+   * Get category values (valueTexts) for dynamic year mapping
+   * @param {Object} dataset 
+   * @param {string} catDimId 
+   * @returns {Array}
+   */
+  _getCategoryValues(dataset, catDimId) {
+    if (!catDimId) return [];
+    
+    try {
+      const dimension = dataset.Dimension(catDimId);
+      const category = dimension.Category();
+      
+      // Try multiple approaches to get the actual year values
+      if (category?.valueTexts && Array.isArray(category.valueTexts)) {
+        return category.valueTexts;
+      }
+      
+      // Fallback: try to get from the dimension itself
+      if (dimension?.label && Array.isArray(dimension.label)) {
+        return Object.values(dimension.label);
+      }
+      
+      // Another fallback: try category.label values
+      if (category?.label && typeof category.label === 'object') {
+        return Object.values(category.label);
+      }
+      
+      return [];
+    } catch (error) {
+      console.log(`Error getting category values for ${catDimId}:`, error);
+      return [];
+    }
   }
 
   /**
