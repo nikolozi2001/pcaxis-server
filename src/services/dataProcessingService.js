@@ -27,7 +27,7 @@ export class DataProcessingService {
     } else if (datasetId === 'sewerage-network-population') {
       // Special handling for sewerage-network-population to use actual years
       return this._processSewerageNetworkPopulationSpecial(dataset, years, yearDimId, otherDims);
-    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery' && datasetId !== 'municipal-waste' && datasetId !== 'fertilizer-use' && datasetId !== 'geological-phenomena' && datasetId !== 'final-energy-consumption' && datasetId !== 'primary-energy-supply' && datasetId !== 'energy-intensity' && datasetId !== 'protected-areas-mammals') {
+    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery' && datasetId !== 'municipal-waste' && datasetId !== 'fertilizer-use' && datasetId !== 'geological-phenomena' && datasetId !== 'final-energy-consumption' && datasetId !== 'primary-energy-supply' && datasetId !== 'energy-intensity' && datasetId !== 'protected-areas-mammals' && datasetId !== 'protected-areas-categories' && datasetId !== 'protected-areas-birds') {
       // Two dimensions (years + one category) - except for special datasets that need numeric indices
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
@@ -216,6 +216,16 @@ export class DataProcessingService {
     // Special handling for protected-areas-mammals dataset (treat as multi-dimensional with numeric indices)
     if (datasetId === 'protected-areas-mammals') {
       return this._processProtectedAreasMammalsSpecial(dataset, years, yearDimId, otherDims, lang);
+    }
+
+    // Special handling for protected-areas-categories dataset (treat as multi-dimensional with numeric indices)
+    if (datasetId === 'protected-areas-categories') {
+      return this._processProtectedAreasCategoriesSpecial(dataset, years, yearDimId, otherDims, lang);
+    }
+
+    // Special handling for protected-areas-birds dataset (treat as multi-dimensional with numeric indices)
+    if (datasetId === 'protected-areas-birds') {
+      return this._processProtectedAreasBirdsSpecial(dataset, years, yearDimId, otherDims, lang);
     }
 
     // Default processing for other datasets
@@ -1529,6 +1539,132 @@ export class DataProcessingService {
 
     return {
       title: dataset.label || 'Protected Areas Mammals',
+      dimensions: [yearDimId, speciesDim],
+      categories: speciesValues.map((_, index) => index.toString()), // Use numeric indices as categories
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(actualYears),
+        dimensionCount: otherDims.length + 1,
+        seriesCount: speciesValues.length,
+        categoryMapping: speciesValues.map((speciesId, index) => ({ 
+          index: index.toString(), 
+          id: speciesId,
+          label: speciesLabels[speciesId] || speciesId 
+        })) // Provide category mapping for metadata API
+      }
+    };
+  }
+
+  /**
+   * Special processing for protected-areas-categories dataset with numeric indices
+   * @param {Object} dataset 
+   * @param {Array} years 
+   * @param {string} yearDimId 
+   * @param {Array} otherDims 
+   * @param {string} lang - Language code
+   * @returns {Object}
+   */
+  _processProtectedAreasCategoriesSpecial(dataset, years, yearDimId, otherDims, lang = 'ka') {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && year.toString().trim() !== '');
+
+    // Get the categories dimension
+    const categoriesDim = otherDims[0]; // Should be the categories dimension
+    const categoriesValues = dataset.Dimension(categoriesDim).id;
+    const categoriesLabels = this._getCategoryLabels(dataset, categoriesDim);
+
+    const data = [];
+
+    // Create a row for each valid year
+    validYears.forEach((year, yearIndex) => {
+      const row = { year: Number(year) || year }; // Use the year as provided
+
+      // For each category, get the data using numeric indices
+      categoriesValues.forEach((categoryId, categoryIndex) => {
+        const queryObj = { 
+          [yearDimId]: year, 
+          [categoriesDim]: categoryId 
+        };
+        const cell = dataset.Data(queryObj);
+        const value = cell ? Number(cell.value) : null;
+        
+        // Use numeric index as the key instead of category name
+        row[categoryIndex.toString()] = value;
+      });
+
+      data.push(row);
+    });
+
+    // Calculate actual years for metadata
+    const actualYears = validYears.map(year => Number(year) || year);
+
+    return {
+      title: dataset.label || 'Protected Areas Categories',
+      dimensions: [yearDimId, categoriesDim],
+      categories: categoriesValues.map((_, index) => index.toString()), // Use numeric indices as categories
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(actualYears),
+        dimensionCount: otherDims.length + 1,
+        seriesCount: categoriesValues.length,
+        categoryMapping: categoriesValues.map((categoryId, index) => ({ 
+          index: index.toString(), 
+          id: categoryId,
+          label: categoriesLabels[categoryId] || categoryId 
+        })) // Provide category mapping for metadata API
+      }
+    };
+  }
+
+  /**
+   * Special processing for protected-areas-birds dataset with numeric indices
+   * @param {Object} dataset 
+   * @param {Array} years 
+   * @param {string} yearDimId 
+   * @param {Array} otherDims 
+   * @param {string} lang - Language code
+   * @returns {Object}
+   */
+  _processProtectedAreasBirdsSpecial(dataset, years, yearDimId, otherDims, lang = 'ka') {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && year.toString().trim() !== '');
+
+    // Get the bird species dimension
+    const speciesDim = otherDims[0]; // Should be the bird species dimension
+    const speciesValues = dataset.Dimension(speciesDim).id;
+    const speciesLabels = this._getCategoryLabels(dataset, speciesDim);
+
+    const data = [];
+
+    // Create a row for each valid year
+    validYears.forEach((year, yearIndex) => {
+      const row = { year: Number(year) || year }; // Use the year as provided
+
+      // For each bird species, get the data using numeric indices
+      speciesValues.forEach((speciesId, speciesIndex) => {
+        const queryObj = { 
+          [yearDimId]: year, 
+          [speciesDim]: speciesId 
+        };
+        const cell = dataset.Data(queryObj);
+        const value = cell ? Number(cell.value) : null;
+        
+        // Use numeric index as the key instead of species name
+        row[speciesIndex.toString()] = value;
+      });
+
+      data.push(row);
+    });
+
+    // Calculate actual years for metadata
+    const actualYears = validYears.map(year => Number(year) || year);
+
+    return {
+      title: dataset.label || 'Protected Areas Birds',
       dimensions: [yearDimId, speciesDim],
       categories: speciesValues.map((_, index) => index.toString()), // Use numeric indices as categories
       data: data,
