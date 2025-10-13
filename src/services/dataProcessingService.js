@@ -647,8 +647,8 @@ export class DataProcessingService {
 
     // Add calculated field labels
     const totalIntensityLabels = {
-      ka: 'სასუქების ჯამური ინტენსივობა (ათასი ტონა/მილიონი ჰექტარი)',
-      en: 'Total fertilizer intensity (thousand tons/million hectares)'
+      ka: 'სასუქების ჯამური ინტენსივობა (ათასი ტონა/კგ ჰექტარი)',
+      en: 'Total fertilizer intensity (thousand tons/kg hectares)'
     };
 
     // Build extended category mapping including calculated field
@@ -1371,8 +1371,8 @@ export class DataProcessingService {
         if (datasetId === 'fertilizer-use' && v.code === 'Fertilizer consumption') {
           // Add the calculated field to valueTexts based on language
           const calculatedFieldText = lang === 'en' 
-            ? 'Total fertilizer intensity (thousand tons/million hectares)'
-            : 'სასუქების ჯამური ინტენსივობა (ათასი ტონა/მილიონი ჰექტარი)';
+            ? 'Total fertilizer intensity (thousand tons/Kg hectares)'
+            : 'სასუქების ჯამური ინტენსივობა (ათასი ტონა/კგ ჰექტარი)';
           
           valueTexts = [...valueTexts, calculatedFieldText];
           // Add corresponding values index
