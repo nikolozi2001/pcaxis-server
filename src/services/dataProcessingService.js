@@ -27,7 +27,7 @@ export class DataProcessingService {
     } else if (datasetId === 'sewerage-network-population') {
       // Special handling for sewerage-network-population to use actual years
       return this._processSewerageNetworkPopulationSpecial(dataset, years, yearDimId, otherDims);
-    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery' && datasetId !== 'municipal-waste' && datasetId !== 'geological-phenomena' && datasetId !== 'final-energy-consumption' && datasetId !== 'primary-energy-supply' && datasetId !== 'energy-intensity') {
+    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery' && datasetId !== 'municipal-waste' && datasetId !== 'fertilizer-use' && datasetId !== 'geological-phenomena' && datasetId !== 'final-energy-consumption' && datasetId !== 'primary-energy-supply' && datasetId !== 'energy-intensity') {
       // Two dimensions (years + one category) - except for special datasets that need numeric indices
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
@@ -176,6 +176,11 @@ export class DataProcessingService {
     // Special handling for municipal-waste dataset (treat as multi-dimensional)
     if (datasetId === 'municipal-waste') {
       return this._processMunicipalWasteSpecial(dataset, years, yearDimId, otherDims, lang);
+    }
+
+    // Special handling for fertilizer-use dataset (treat as multi-dimensional)
+    if (datasetId === 'fertilizer-use') {
+      return this._processFertilizerUseSpecial(dataset, years, yearDimId, otherDims, lang);
     }
 
     // Special handling for forest-fires dataset (treat as multi-dimensional)
@@ -544,6 +549,115 @@ export class DataProcessingService {
         yearRange: this._getYearRange(actualYears), // Use actual years for range
         dimensionCount: otherDims.length + 1,
         seriesCount: wasteValues.length + 1, // Include calculated field
+        yearMapping: actualYears.map((actualYear, index) => ({ index: index.toString(), value: actualYear })), // Use actual years in mapping
+        categoryMapping: extendedCategoryMapping // Include calculated field mapping
+      }
+    };
+  }
+
+  /**
+   * Special processing for fertilizer-use dataset with calculated total fertilizer intensity
+   */
+  _processFertilizerUseSpecial(dataset, years, yearDimId, otherDims, lang = 'ka') {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && year.toString().trim() !== '');
+
+    // Get the fertilizer consumption dimension
+    const fertilizerDim = otherDims[0];
+    const fertilizerValues = dataset.Dimension(fertilizerDim).id;
+    const fertilizerLabels = this._getCategoryLabels(dataset, fertilizerDim);
+
+    // Get year labels to convert indices to actual years
+    const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+    
+    const data = [];
+
+    // Create a row for each valid year with actual years
+    validYears.forEach((year, yearIndex) => {
+      // Fertilizer use years mapping: 0->2006, 1->2007, ..., 18->2024
+      const yearMappings = {
+        '0': 2006, '1': 2007, '2': 2008, '3': 2009, '4': 2010, '5': 2011, 
+        '6': 2012, '7': 2013, '8': 2014, '9': 2015, '10': 2016, '11': 2017, 
+        '12': 2018, '13': 2019, '14': 2020, '15': 2021, '16': 2022, '17': 2023, '18': 2024
+      };
+      
+      let actualYear = yearMappings[year] || year;
+      
+      const row = { year: actualYear }; // Use actual year instead of numeric index
+
+      fertilizerValues.forEach((fertilizerId, fertilizerIndex) => {
+        const queryObj = { [yearDimId]: year, [fertilizerDim]: fertilizerId };
+        const cell = dataset.Data(queryObj);
+        row[fertilizerIndex.toString()] = cell ? Number(cell.value) : null; // Use numeric indices for fertilizer categories
+      });
+
+      // Calculate total fertilizer intensity using the formula:
+      // (Total mineral fertilizers + Total organic fertilizers) / Agricultural area
+      const totalMineralFertilizers = row['9']; // "Total consumption of mineral fertilizers, 1000 tons"
+      const totalOrganicFertilizers = row['15']; // "Total consumption of organic fertilizers, 1000 tons"
+      const agriculturalArea = row['0']; // "Agricultural area, million hectares"
+      
+      let totalFertilizerIntensity = null;
+
+      // Only calculate if we have all required values
+      if (totalMineralFertilizers !== null && totalOrganicFertilizers !== null && 
+          agriculturalArea !== null && agriculturalArea !== 0) {
+        // Convert agricultural area from million hectares to thousand hectares for consistent units
+        // Formula: (mineral + organic fertilizers in 1000 tons) / (agricultural area in million hectares)
+        // Result: tons per hectare (since 1000 tons / (million hectares * 1000) = tons/hectare)
+        totalFertilizerIntensity = (totalMineralFertilizers + totalOrganicFertilizers) / agriculturalArea;
+      }
+
+      const calculatedIndex = fertilizerValues.length; // Next available index
+      row[calculatedIndex.toString()] = totalFertilizerIntensity;
+
+      data.push(row);
+    });
+
+    // Collect actual years for metadata using the same mapping
+    const actualYears = validYears.map(year => {
+      const yearMappings = {
+        '0': 2006, '1': 2007, '2': 2008, '3': 2009, '4': 2010, '5': 2011, 
+        '6': 2012, '7': 2013, '8': 2014, '9': 2015, '10': 2016, '11': 2017, 
+        '12': 2018, '13': 2019, '14': 2020, '15': 2021, '16': 2022, '17': 2023, '18': 2024
+      };
+      return yearMappings[year] || year;
+    });
+
+    // Add calculated field labels
+    const totalIntensityLabels = {
+      ka: 'სასუქების ჯამური ინტენსივობა (ათასი ტონა/მილიონი ჰექტარი)',
+      en: 'Total fertilizer intensity (thousand tons/million hectares)'
+    };
+
+    // Build extended category mapping including calculated field
+    const extendedCategoryMapping = fertilizerValues.map((fertilizerId, index) => ({
+      index: index.toString(),
+      label: fertilizerLabels[fertilizerId] || fertilizerId
+    }));
+
+    // Add calculated field to category mapping
+    const calculatedIndex = fertilizerValues.length;
+    extendedCategoryMapping.push({
+      index: calculatedIndex.toString(),
+      label: totalIntensityLabels
+    });
+
+    // Build extended categories array including calculated field
+    const extendedCategories = fertilizerValues.map((fertilizerId, index) => index.toString());
+    extendedCategories.push(calculatedIndex.toString());
+
+    return {
+      title: dataset.label || 'F-2. სასუქების გამოყენება',
+      dimensions: [yearDimId, fertilizerDim],
+      categories: extendedCategories, // Include calculated field
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(actualYears), // Use actual years for range
+        dimensionCount: otherDims.length + 1,
+        seriesCount: fertilizerValues.length + 1, // Include calculated field
         yearMapping: actualYears.map((actualYear, index) => ({ index: index.toString(), value: actualYear })), // Use actual years in mapping
         categoryMapping: extendedCategoryMapping // Include calculated field mapping
       }
@@ -1191,6 +1305,18 @@ export class DataProcessingService {
           const calculatedFieldText = lang === 'en' 
             ? 'Annual growth in total waste (%)'
             : 'ნარჩენების ჯამური რაოდენობის წლიური ზრდა (%)';
+          
+          valueTexts = [...valueTexts, calculatedFieldText];
+          // Add corresponding values index
+          originalValues.push(originalValues.length.toString());
+        }
+
+        // Special handling for fertilizer-use dataset to add calculated field
+        if (datasetId === 'fertilizer-use' && v.code === 'Fertilizer consumption') {
+          // Add the calculated field to valueTexts based on language
+          const calculatedFieldText = lang === 'en' 
+            ? 'Total fertilizer intensity (thousand tons/million hectares)'
+            : 'სასუქების ჯამური ინტენსივობა (ათასი ტონა/მილიონი ჰექტარი)';
           
           valueTexts = [...valueTexts, calculatedFieldText];
           // Add corresponding values index
