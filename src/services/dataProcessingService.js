@@ -320,11 +320,25 @@ export class DataProcessingService {
     const categoryValues = dataset.Dimension(categoryDim).id;
     const categoryLabels = this._getCategoryLabels(dataset, categoryDim);
     
+    // Get year labels to convert indices to actual years
+    const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+    
     const data = [];
 
-    // Create a row for each valid year with numeric indices
+    // Create a row for each valid year with actual years
     validYears.forEach((year, yearIndex) => {
-      const row = { year: yearIndex.toString() }; // Convert year to numeric index
+      // Get the actual year from the year labels
+      let actualYear = Number(year) || year;
+      
+      if (yearLabels && yearLabels[year]) {
+        const yearLabel = yearLabels[year];
+        const parsedYear = parseInt(yearLabel);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+      
+      const row = { year: actualYear }; // Use actual year instead of numeric index
       
       categoryValues.forEach((categoryId, categoryIndex) => {
         const queryObj = { [yearDimId]: year, [categoryDim]: categoryId };
@@ -335,6 +349,20 @@ export class DataProcessingService {
       data.push(row);
     });
 
+    // Calculate actual years for metadata
+    const actualYears = validYears.map((year, yearIndex) => {
+      let actualYear = Number(year) || year;
+      
+      if (yearLabels && yearLabels[year]) {
+        const yearLabel = yearLabels[year];
+        const parsedYear = parseInt(yearLabel);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+      return actualYear;
+    });
+
     return {
       title: dataset.label || 'წყლის რესურსების დაცვა და გამოყენება',
       dimensions: [yearDimId, categoryDim],
@@ -343,10 +371,10 @@ export class DataProcessingService {
       metadata: {
         totalRecords: data.length,
         hasCategories: true,
-        yearRange: this._getYearRange(validYears),
+        yearRange: this._getYearRange(actualYears), // Use actual years for range
         dimensionCount: otherDims.length + 1,
         seriesCount: categoryValues.length,
-        yearMapping: validYears.map((year, index) => ({ index: index.toString(), value: year })), // Provide year mapping
+        yearMapping: actualYears.map((actualYear, index) => ({ index: index.toString(), value: actualYear })), // Use actual years in mapping
         categoryMapping: categoryValues.map((catId, index) => ({ 
           index: index.toString(), 
           label: categoryLabels[catId] || catId 
