@@ -175,7 +175,7 @@ export class DataProcessingService {
 
     // Special handling for municipal-waste dataset (treat as multi-dimensional)
     if (datasetId === 'municipal-waste') {
-      return this._processMunicipalWasteSpecial(dataset, years, yearDimId, otherDims);
+      return this._processMunicipalWasteSpecial(dataset, years, yearDimId, otherDims, lang);
     }
 
     // Special handling for forest-fires dataset (treat as multi-dimensional)
@@ -445,7 +445,7 @@ export class DataProcessingService {
   /**
    * Special processing for municipal-waste dataset with actual years
    */
-  _processMunicipalWasteSpecial(dataset, years, yearDimId, otherDims) {
+  _processMunicipalWasteSpecial(dataset, years, yearDimId, otherDims, lang = 'ka') {
     // Filter out empty years first
     const validYears = years.filter(year => year && year.toString().trim() !== '');
 
@@ -455,7 +455,9 @@ export class DataProcessingService {
     const wasteLabels = this._getCategoryLabels(dataset, wasteDim);
 
     // Get year labels to convert indices to actual years
-    const yearLabels = this._getCategoryLabels(dataset, yearDimId);    const data = [];
+    const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+    
+    const data = [];
 
     // Create a row for each valid year with actual years
     validYears.forEach((year, yearIndex) => {
@@ -475,6 +477,27 @@ export class DataProcessingService {
         row[wasteIndex.toString()] = cell ? Number(cell.value) : null; // Use numeric indices for waste categories
       });
 
+      // Calculate annual growth for "მუნიციპალური ნარჩენი, ათასი ტონა" (index 0)
+      const currentMunicipalWaste = row['0'];
+      let annualGrowth = null;
+
+      // Only calculate if we have current value and this is not the first year
+      if (currentMunicipalWaste !== null && yearIndex > 0) {
+        // Get the previous year's value
+        const previousYearIndex = validYears[yearIndex - 1];
+        const previousQueryObj = { [yearDimId]: previousYearIndex, [wasteDim]: wasteValues[0] };
+        const previousCell = dataset.Data(previousQueryObj);
+        const previousValue = previousCell ? Number(previousCell.value) : null;
+
+        if (previousValue !== null && previousValue !== 0) {
+          // Formula: ((current / previous) * 100) - 100
+          annualGrowth = ((currentMunicipalWaste / previousValue) * 100) - 100;
+        }
+      }
+
+      const calculatedIndex = wasteValues.length; // Next available index
+      row[calculatedIndex.toString()] = annualGrowth;
+
       data.push(row);
     });
 
@@ -487,22 +510,42 @@ export class DataProcessingService {
       return yearMappings[year] || year;
     });
 
+    // Add calculated field labels
+    const annualGrowthLabels = {
+      ka: 'ნარჩენების ჯამური რაოდენობის წლიური ზრდა (%)',
+      en: 'Annual growth in total waste (%)'
+    };
+
+    // Build extended category mapping including calculated field
+    const extendedCategoryMapping = wasteValues.map((wasteId, index) => ({
+      index: index.toString(),
+      label: wasteLabels[wasteId] || wasteId
+    }));
+
+    // Add calculated field to category mapping
+    const calculatedIndex = wasteValues.length;
+    extendedCategoryMapping.push({
+      index: calculatedIndex.toString(),
+      label: annualGrowthLabels
+    });
+
+    // Build extended categories array including calculated field
+    const extendedCategories = wasteValues.map((wasteId, index) => index.toString());
+    extendedCategories.push(calculatedIndex.toString());
+
     return {
       title: dataset.label || 'ნაგავსაყრელებზე განთავსებული მუნიციპალური ნარჩენები',
       dimensions: [yearDimId, wasteDim],
-      categories: wasteValues.map((wasteId, index) => index.toString()), // Use numeric indices
+      categories: extendedCategories, // Include calculated field
       data: data,
       metadata: {
         totalRecords: data.length,
         hasCategories: true,
         yearRange: this._getYearRange(actualYears), // Use actual years for range
         dimensionCount: otherDims.length + 1,
-        seriesCount: wasteValues.length,
+        seriesCount: wasteValues.length + 1, // Include calculated field
         yearMapping: actualYears.map((actualYear, index) => ({ index: index.toString(), value: actualYear })), // Use actual years in mapping
-        categoryMapping: wasteValues.map((wasteId, index) => ({
-          index: index.toString(),
-          label: wasteLabels[wasteId] || wasteId
-        })) // Provide waste category mapping
+        categoryMapping: extendedCategoryMapping // Include calculated field mapping
       }
     };
   }
@@ -1136,6 +1179,18 @@ export class DataProcessingService {
           const calculatedFieldText = lang === 'en' 
             ? 'Agriculture and other'
             : 'სოფ.მეურნეობა და სხვა';
+          
+          valueTexts = [...valueTexts, calculatedFieldText];
+          // Add corresponding values index
+          originalValues.push(originalValues.length.toString());
+        }
+
+        // Special handling for municipal-waste dataset to add calculated field
+        if (datasetId === 'municipal-waste' && v.code === 'Waste') {
+          // Add the calculated field to valueTexts based on language
+          const calculatedFieldText = lang === 'en' 
+            ? 'Annual growth in total waste (%)'
+            : 'ნარჩენების ჯამური რაოდენობის წლიური ზრდა (%)';
           
           valueTexts = [...valueTexts, calculatedFieldText];
           // Add corresponding values index
