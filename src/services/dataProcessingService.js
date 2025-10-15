@@ -27,7 +27,7 @@ export class DataProcessingService {
     } else if (datasetId === 'sewerage-network-population') {
       // Special handling for sewerage-network-population to use actual years
       return this._processSewerageNetworkPopulationSpecial(dataset, years, yearDimId, otherDims);
-    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery' && datasetId !== 'municipal-waste' && datasetId !== 'fertilizer-use' && datasetId !== 'geological-phenomena' && datasetId !== 'final-energy-consumption' && datasetId !== 'primary-energy-supply' && datasetId !== 'energy-intensity' && datasetId !== 'protected-areas-mammals' && datasetId !== 'protected-areas-categories' && datasetId !== 'protected-areas-birds') {
+    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery' && datasetId !== 'municipal-waste' && datasetId !== 'fertilizer-use' && datasetId !== 'geological-phenomena' && datasetId !== 'final-energy-consumption' && datasetId !== 'primary-energy-supply' && datasetId !== 'energy-intensity' && datasetId !== 'protected-areas-mammals' && datasetId !== 'protected-areas-categories' && datasetId !== 'protected-areas-birds' && datasetId !== 'timber-by-cutting-purpose') {
       // Two dimensions (years + one category) - except for special datasets that need numeric indices
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
@@ -226,6 +226,11 @@ export class DataProcessingService {
     // Special handling for protected-areas-birds dataset (treat as multi-dimensional with numeric indices)
     if (datasetId === 'protected-areas-birds') {
       return this._processProtectedAreasBirdsSpecial(dataset, years, yearDimId, otherDims, lang);
+    }
+
+    // Special handling for timber-by-cutting-purpose dataset (treat as multi-dimensional with numeric indices)
+    if (datasetId === 'timber-by-cutting-purpose') {
+      return this._processTimberByCuttingPurposeSpecial(dataset, years, yearDimId, otherDims, lang);
     }
 
     // Default processing for other datasets
@@ -1678,6 +1683,114 @@ export class DataProcessingService {
           index: index.toString(), 
           id: speciesId,
           label: speciesLabels[speciesId] || speciesId 
+        })) // Provide category mapping for metadata API
+      }
+    };
+  }
+
+  /**
+   * Special processing for timber-by-cutting-purpose dataset with numeric indices
+   * @param {Object} dataset 
+   * @param {Array} years 
+   * @param {string} yearDimId 
+   * @param {Array} otherDims 
+   * @param {string} lang - Language code
+   * @returns {Object}
+   */
+  _processTimberByCuttingPurposeSpecial(dataset, years, yearDimId, otherDims, lang = 'ka') {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && year.toString().trim() !== '');
+
+    // This dataset has 3 dimensions: Cutting purpose, Year, Forest Type
+    const purposeDim = otherDims.find(dim => dim === 'Cutting purpose') || otherDims[0];
+    const forestTypeDim = otherDims.find(dim => dim === 'Forest Type') || otherDims[1];
+    
+    const purposeValues = dataset.Dimension(purposeDim).id;
+    const purposeLabels = this._getCategoryLabels(dataset, purposeDim);
+    const forestTypeValues = dataset.Dimension(forestTypeDim).id;
+    const forestTypeLabels = this._getCategoryLabels(dataset, forestTypeDim);
+
+    // Get year labels to convert indices to actual years
+    const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+
+    const data = [];
+
+    // Create a row for each valid year
+    validYears.forEach((year, yearIndex) => {
+      // Get the actual year from the year labels
+      let actualYear = Number(year) || year;
+      
+      if (yearLabels && yearLabels[year]) {
+        const yearLabel = yearLabels[year];
+        const parsedYear = parseInt(yearLabel);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+
+      const row = { year: actualYear }; // Use actual year
+
+      let seriesIndex = 0;
+      // Combine cutting purpose and forest type to create series
+      purposeValues.forEach((purposeId) => {
+        forestTypeValues.forEach((forestTypeId) => {
+          const queryObj = { 
+            [yearDimId]: year, 
+            [purposeDim]: purposeId,
+            [forestTypeDim]: forestTypeId
+          };
+          const cell = dataset.Data(queryObj);
+          const value = cell ? Number(cell.value) : null;
+          
+          // Use numeric index as the key
+          row[seriesIndex.toString()] = value;
+          seriesIndex++;
+        });
+      });
+
+      data.push(row);
+    });
+
+    // Calculate actual years for metadata
+    const actualYears = validYears.map((year, yearIndex) => {
+      let actualYear = Number(year) || year;
+      
+      if (yearLabels && yearLabels[year]) {
+        const yearLabel = yearLabels[year];
+        const parsedYear = parseInt(yearLabel);
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      }
+      return actualYear;
+    });
+
+    // Create combined labels for purpose and forest type
+    const combinedLabels = [];
+    purposeValues.forEach((purposeId) => {
+      forestTypeValues.forEach((forestTypeId) => {
+        const purposeLabel = purposeLabels[purposeId] || purposeId;
+        const forestTypeLabel = forestTypeLabels[forestTypeId] || forestTypeId;
+        combinedLabels.push(`${purposeLabel} - ${forestTypeLabel}`);
+      });
+    });
+
+    const totalSeries = purposeValues.length * forestTypeValues.length;
+
+    return {
+      title: dataset.label || 'Timber by Cutting Purpose',
+      dimensions: [yearDimId, purposeDim, forestTypeDim],
+      categories: Array.from({length: totalSeries}, (_, i) => i.toString()), // Use numeric indices as categories
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(actualYears),
+        dimensionCount: otherDims.length + 1,
+        seriesCount: totalSeries,
+        categoryMapping: combinedLabels.map((label, index) => ({ 
+          index: index.toString(), 
+          label: label 
         })) // Provide category mapping for metadata API
       }
     };
