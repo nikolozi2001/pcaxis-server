@@ -1,37 +1,366 @@
 /**
  * Data Processing Service
- * Handles data transformation and formatting
+ * Handles data transformation and formatting for PXWeb datasets
+ * 
+ * ================================================================================
+ * COMPREHENSIVE MAINTENANCE DOCUMENTATION
+ * ================================================================================
+ * 
+ * TABLE OF CONTENTS:
+ * 1. Architecture Overview
+ * 2. Configuration Management
+ * 3. Adding New Datasets
+ * 4. Troubleshooting Guide
+ * 5. Testing Procedures
+ * 6. Common Patterns
+ * 7. Performance Considerations
+ * 8. Error Handling
+ * 
+ * ================================================================================
+ * 1. ARCHITECTURE OVERVIEW
+ * ================================================================================
+ * 
+ * SIMPLIFIED PROCESSING FLOW:
+ * ---------------------------
+ * Client Request → processForChart() → _routeToProcessor() → Specific Processor
+ *                                   ↓
+ *                              Helper Methods + Configurations
+ * 
+ * KEY DESIGN PRINCIPLES:
+ * - Configuration-driven routing (no hardcoded conditionals)
+ * - Reusable helper methods for common operations
+ * - Consistent data structure transformations
+ * - Extensible for new datasets without code duplication
+ * 
+ * ================================================================================
+ * 2. CONFIGURATION MANAGEMENT
+ * ================================================================================
+ * 
+ * CONFIGURATION OBJECTS (Static Properties):
+ * ------------------------------------------
+ * 
+ * A) DATASET_PROCESSORS:
+ *    Purpose: Maps dataset IDs to their specific processor methods
+ *    Format: { 'dataset-id': '_methodName' }
+ *    Example: { 'forest-fires': '_processForestFiresSpecial' }
+ * 
+ * B) EXCLUDE_FROM_TWO_DIM:
+ *    Purpose: Datasets that need multi-dimensional processing even with 2 dimensions
+ *    Reason: Usually because they need numeric indices instead of category names
+ *    Format: Set(['dataset-id1', 'dataset-id2'])
+ * 
+ * C) DATASET_YEAR_MAPPINGS:
+ *    Purpose: Custom year mappings for datasets using index-based years
+ *    Format: { 'dataset-id': { 'index': actualYear } }
+ *    Example: { 'forest-fires': { '0': 2017, '1': 2018 } }
+ * 
+ * D) FOREST_FIRES_REGION_MAPPINGS:
+ *    Purpose: Example of dataset-specific mappings (extend pattern for other datasets)
+ *    Structure: { indexToId: {...}, indexToCode: {...} }
+ * 
+ * ================================================================================
+ * 3. ADDING NEW DATASETS - STEP-BY-STEP GUIDE
+ * ================================================================================
+ * 
+ * SCENARIO A: Dataset needs numeric indices instead of category names
+ * ------------------------------------------------------------------
+ * 1. Add to DATASET_PROCESSORS: { 'new-dataset': '_processNewDatasetSpecial' }
+ * 2. Add to EXCLUDE_FROM_TWO_DIM: 'new-dataset'
+ * 3. Create processor method following template in section 6
+ * 4. Test with: curl "http://localhost:3000/api/datasets/new-dataset/data"
+ * 
+ * SCENARIO B: Dataset has custom year mappings
+ * --------------------------------------------
+ * 1. Follow steps from Scenario A
+ * 2. Add to DATASET_YEAR_MAPPINGS: { 'new-dataset': { '0': 2020, '1': 2021 } }
+ * 3. Use _parseYear(year, yearIndex, yearLabels, 'new-dataset') in processor
+ * 
+ * SCENARIO C: Dataset has region/location mappings
+ * ------------------------------------------------
+ * 1. Follow steps from previous scenarios
+ * 2. Create NEW_DATASET_REGION_MAPPINGS static configuration
+ * 3. Use configuration in processor instead of hardcoded mappings
+ * 
+ * ================================================================================
+ * 4. TROUBLESHOOTING GUIDE
+ * ================================================================================
+ * 
+ * PROBLEM: Dataset returns category names instead of numeric indices
+ * SOLUTION: Add dataset to DATASET_PROCESSORS and EXCLUDE_FROM_TWO_DIM
+ * 
+ * PROBLEM: Years appear as indices (0, 1, 2) instead of actual years
+ * SOLUTION: Add year mapping to DATASET_YEAR_MAPPINGS or check _parseYear logic
+ * 
+ * PROBLEM: New dataset not using special processor
+ * SOLUTION: Verify dataset ID matches exactly in DATASET_PROCESSORS
+ * 
+ * PROBLEM: API returns empty data
+ * SOLUTION: Check _logProcessing output in development mode
+ * 
+ * DEBUGGING COMMANDS:
+ * - Check dataset structure: curl "http://localhost:3000/api/datasets/DATASET/data" | head -100
+ * - View years only: curl "http://localhost:3000/api/datasets/DATASET/data" | grep -o '"year":[0-9]*'
+ * - Check categories: curl "http://localhost:3000/api/datasets/DATASET/data" | grep -o '"categories":\[[^]]*\]'
+ * 
+ * ================================================================================
+ * 5. TESTING PROCEDURES
+ * ================================================================================
+ * 
+ * REQUIRED TESTS FOR NEW DATASETS:
+ * --------------------------------
+ * 1. Verify numeric indices: Should return "0", "1", "2" not category names
+ * 2. Check actual years: Should return 2017, 2018, etc. not 0, 1, 2
+ * 3. Validate data structure: Ensure region mappings work correctly
+ * 4. Test metadata: Verify yearRange, categoryMapping, dimensionCount
+ * 
+ * TEST COMMANDS TEMPLATE:
+ * ----------------------
+ * # Basic structure test
+ * curl -s "http://localhost:3000/api/datasets/DATASET/data" | head -50
+ * 
+ * # Year validation
+ * curl -s "http://localhost:3000/api/datasets/DATASET/data" | grep -o '"year":[0-9]*' | sort -u
+ * 
+ * # Category validation  
+ * curl -s "http://localhost:3000/api/datasets/DATASET/data" | grep -A5 '"categories"'
+ * 
+ * ================================================================================
+ * 6. COMMON PATTERNS - PROCESSOR METHOD TEMPLATES
+ * ================================================================================
+ * 
+ * TEMPLATE A: Basic numeric indices processor
+ * ------------------------------------------
+ * _processNewDatasetSpecial(dataset, years, yearDimId, otherDims, lang = 'ka') {
+ *   const validYears = years.filter(year => year && year.toString().trim() !== '');
+ *   const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+ *   const categoryDim = otherDims[0];
+ *   const categoryValues = dataset.Dimension(categoryDim).id;
+ *   const categoryLabels = this._getCategoryLabels(dataset, categoryDim);
+ *   
+ *   const data = [];
+ *   validYears.forEach((year, yearIndex) => {
+ *     const actualYear = this._parseYear(year, yearIndex, yearLabels, 'new-dataset');
+ *     const row = { year: actualYear };
+ *     categoryValues.forEach((categoryId, categoryIndex) => {
+ *       const queryObj = { [yearDimId]: year, [categoryDim]: categoryId };
+ *       const cell = dataset.Data(queryObj);
+ *       row[categoryIndex.toString()] = cell ? Number(cell.value) : null;
+ *     });
+ *     data.push(row);
+ *   });
+ *   
+ *   return {
+ *     title: dataset.label || 'Dataset Title',
+ *     dimensions: [yearDimId, categoryDim],
+ *     categories: categoryValues.map((_, index) => index.toString()),
+ *     data: data,
+ *     metadata: {
+ *       totalRecords: data.length,
+ *       hasCategories: true,
+ *       yearRange: this._getYearRange(data.map(row => row.year)),
+ *       categoryMapping: this._createNumericCategoryMapping(categoryValues, categoryLabels, 'new-dataset')
+ *     }
+ *   };
+ * }
+ * 
+ * ================================================================================
+ * 7. PERFORMANCE CONSIDERATIONS
+ * ================================================================================
+ * 
+ * OPTIMIZATION GUIDELINES:
+ * -----------------------
+ * - Use configuration lookups instead of repeated conditionals
+ * - Cache category labels using _getCategoryLabels() once per dimension
+ * - Filter empty years early to reduce processing
+ * - Use helper methods to avoid code duplication
+ * - Minimize object creation in loops
+ * 
+ * MONITORING:
+ * ----------
+ * - Use _logProcessing() for development debugging
+ * - Monitor response times for large datasets
+ * - Check memory usage with complex multi-dimensional data
+ * 
+ * ================================================================================
+ * 8. ERROR HANDLING & LOGGING
+ * ================================================================================
+ * 
+ * ERROR PATTERNS:
+ * --------------
+ * - Always validate dataset dimensions exist before accessing
+ * - Use fallback values for missing labels/mappings  
+ * - Handle null/undefined data gracefully
+ * - Provide meaningful error messages in logs
+ * 
+ * LOGGING STRATEGY:
+ * ----------------
+ * - Use _logProcessing() for dataset-specific information
+ * - Log configuration mismatches in development
+ * - Include dataset ID and operation context in logs
+ * - Avoid logging in production unless critical errors
  */
 export class DataProcessingService {
+  
   /**
-   * Process dataset into chart-friendly format
-   * @param {Object} dataset - JSON-Stat dataset
-   * @param {string} datasetId - Dataset identifier for special handling
-   * @param {string} lang - Language code ('ka' or 'en')
-   * @returns {Object} - Processed data for charts
+   * CONFIGURATION: Dataset-specific processors
+   * ------------------------------------------
+   * Maps dataset IDs to their special processor methods.
+   * 
+   * MAINTENANCE: When adding a new dataset that needs special processing:
+   * 1. Add entry: 'dataset-id': '_processDatasetIdSpecial'
+   * 2. Create the corresponding method following naming convention
+   * 3. Test with curl command to verify correct processing
+   */
+  static DATASET_PROCESSORS = {
+    'water-use-households': '_processWaterUseHouseholdsSpecial',
+    'sewerage-network-population': '_processSewerageNetworkPopulationSpecial',
+    'water-abstraction': '_processWaterAbstractionSpecial',
+    'material-flow-indicators': '_processMaterialFlowIndicatorsSpecial',
+    'felled-timber-volume': '_processFelledTimberVolumeSpecial',
+    'illegal-logging': '_processIllegalLoggingSpecial',
+    'forest-planting-recovery': '_processForestPlantingRecoverySpecial',
+    'municipal-waste': '_processMunicipalWasteSpecial',
+    'fertilizer-use': '_processFertilizerUseSpecial',
+    'geological-phenomena': '_processGeologicalPhenomenaSpecial',
+    'final-energy-consumption': '_processFinalEnergyConsumptionSpecial',
+    'primary-energy-supply': '_processPrimaryEnergySupplySpecial',
+    'energy-intensity': '_processEnergyIntensitySpecial',
+    'protected-areas-mammals': '_processProtectedAreasMammalsSpecial',
+    'protected-areas-categories': '_processProtectedAreasCategoriesSpecial',
+    'protected-areas-birds': '_processProtectedAreasBirdsSpecial',
+    'timber-by-cutting-purpose': '_processTimberByCuttingPurposeSpecial',
+    'forest-fires': '_processForestFiresSpecial'
+  };
+
+  /**
+   * CONFIGURATION: Two-dimensional processing exclusions
+   * ---------------------------------------------------
+   * Datasets that should use multi-dimensional processing even with only 2 dimensions.
+   * Usually because they need numeric indices instead of category names.
+   * 
+   * MAINTENANCE: Add dataset ID here if it should bypass simple 2D processing.
+   */
+  static EXCLUDE_FROM_TWO_DIM = new Set([
+    'water-abstraction', 'material-flow-indicators', 'felled-timber-volume',
+    'illegal-logging', 'forest-planting-recovery', 'municipal-waste',
+    'fertilizer-use', 'geological-phenomena', 'final-energy-consumption',
+    'primary-energy-supply', 'energy-intensity', 'protected-areas-mammals',
+    'protected-areas-categories', 'protected-areas-birds', 'timber-by-cutting-purpose'
+  ]);
+
+  /**
+   * CONFIGURATION: Dataset-specific year mappings
+   * ---------------------------------------------
+   * For datasets that use index-based years (0, 1, 2) instead of actual years.
+   * 
+   * MAINTENANCE: Add mapping when dataset has non-standard year indexing.
+   * Format: { 'dataset-id': { 'yearIndex': actualYear } }
+   */
+  static DATASET_YEAR_MAPPINGS = {
+    'forest-fires': {
+      '0': 2017, '1': 2018, '2': 2019, '3': 2020, 
+      '4': 2021, '5': 2022, '6': 2023
+    }
+    // TEMPLATE for new dataset:
+    // 'new-dataset': {
+    //   '0': 2020, '1': 2021, '2': 2022
+    // }
+  };
+
+  /**
+   * CONFIGURATION: Forest-fires region mappings
+   * -------------------------------------------
+   * Example of dataset-specific region/location mappings.
+   * Extend this pattern for other datasets with similar needs.
+   * 
+   * MAINTENANCE: Create similar mappings for other geographic datasets.
+   * Pattern: [DATASET_NAME]_REGION_MAPPINGS = { indexToId: {...}, indexToCode: {...} }
+   */
+  static FOREST_FIRES_REGION_MAPPINGS = {
+    indexToId: {
+      "0": 1, "1": -2, "2": 2, "3": 3, "4": 4, "5": 5,
+      "6": 6, "7": 7, "8": 8, "9": 9, "10": 10, "11": 11, "12": 12
+    },
+    indexToCode: {
+      "0": "GE-TB", "1": "GE-AB", "2": "GE-AJ", "3": "GE-GU", 
+      "4": "GE-IM", "5": "GE-KA", "6": "GE-MM", "7": "GE-RL",
+      "8": "GE-SZ", "9": "GE-SJ", "10": "GE-KK", "11": "GE-SK", "12": "UNKNOWN"
+    }
+  };
+  /**
+   * MAIN ENTRY POINT: Process dataset into chart-friendly format
+   * ============================================================
+   * 
+   * This is the primary method called by controllers to transform PXWeb data.
+   * It identifies the dataset structure and routes to appropriate processor.
+   * 
+   * MAINTENANCE NOTES:
+   * - This method should remain simple and delegate to _routeToProcessor
+   * - All dataset-specific logic should be in configuration or special processors
+   * - Changes here affect ALL datasets, so test thoroughly
+   * 
+   * @param {Object} dataset - JSON-Stat dataset from PXWeb API
+   * @param {string} datasetId - Dataset identifier for routing to special processors
+   * @param {string} lang - Language code ('ka' for Georgian, 'en' for English)
+   * @returns {Object} - Standardized data structure for frontend consumption
    */
   processForChart(dataset, datasetId = null, lang = 'ka') {
+    // Extract basic dataset structure information
     const dimIds = dataset.id;
     const yearDimId = this._findYearDimension(dimIds);
     const otherDims = dimIds.filter(d => d !== yearDimId);
-    
     const years = dataset.Dimension(yearDimId).id;
     
-    // Handle different data structures
+    // Delegate to routing logic
+    return this._routeToProcessor(dataset, datasetId, years, yearDimId, otherDims, lang);
+  }
+
+  /**
+   * ROUTING LOGIC: Determine appropriate processor for dataset
+   * =========================================================
+   * 
+   * This method implements the configuration-driven routing system.
+   * It replaces the old complex conditional logic with clean configuration lookups.
+   * 
+   * ROUTING PRIORITY:
+   * 1. Special processor (if configured in DATASET_PROCESSORS)
+   * 2. Single dimension → _processSingleDimension
+   * 3. Two dimensions (not excluded) → _processTwoDimensions  
+   * 4. Multi-dimensional or excluded → _processMultiDimensions
+   * 
+   * MAINTENANCE NOTES:
+   * - Add new datasets to configurations, not this method
+   * - This logic should remain stable and configuration-driven
+   * - Test routing with: console.log('Routing to:', processorMethod)
+   * 
+   * @param {Object} dataset - JSON-Stat dataset
+   * @param {string} datasetId - Dataset identifier for configuration lookup
+   * @param {Array} years - Year dimension data
+   * @param {string} yearDimId - Year dimension identifier
+   * @param {Array} otherDims - Non-year dimensions
+   * @param {string} lang - Language code
+   * @returns {Object} - Processed data from appropriate processor
+   */
+  _routeToProcessor(dataset, datasetId, years, yearDimId, otherDims, lang) {
+    // STEP 1: Check for dataset-specific processor
+    if (datasetId && DataProcessingService.DATASET_PROCESSORS[datasetId]) {
+      const processorMethod = DataProcessingService.DATASET_PROCESSORS[datasetId];
+      this._logProcessing(datasetId, `Routing to special processor: ${processorMethod}`);
+      return this[processorMethod](dataset, years, yearDimId, otherDims, lang);
+    }
+
+    // STEP 2: Route based on dimension structure
     if (otherDims.length === 0) {
-      // Single dimension (only years)
+      // Only year dimension - simple time series
+      this._logProcessing(datasetId, 'Routing to single dimension processor');
       return this._processSingleDimension(dataset, years, yearDimId);
-    } else if (datasetId === 'water-use-households') {
-      // Special handling for water-use-households to use actual years
-      return this._processWaterUseHouseholdsSpecial(dataset, years, yearDimId, otherDims);
-    } else if (datasetId === 'sewerage-network-population') {
-      // Special handling for sewerage-network-population to use actual years
-      return this._processSewerageNetworkPopulationSpecial(dataset, years, yearDimId, otherDims);
-    } else if (otherDims.length === 1 && datasetId !== 'water-abstraction' && datasetId !== 'material-flow-indicators' && datasetId !== 'felled-timber-volume' && datasetId !== 'illegal-logging' && datasetId !== 'forest-planting-recovery' && datasetId !== 'municipal-waste' && datasetId !== 'fertilizer-use' && datasetId !== 'geological-phenomena' && datasetId !== 'final-energy-consumption' && datasetId !== 'primary-energy-supply' && datasetId !== 'energy-intensity' && datasetId !== 'protected-areas-mammals' && datasetId !== 'protected-areas-categories' && datasetId !== 'protected-areas-birds' && datasetId !== 'timber-by-cutting-purpose') {
-      // Two dimensions (years + one category) - except for special datasets that need numeric indices
+    } else if (otherDims.length === 1 && !DataProcessingService.EXCLUDE_FROM_TWO_DIM.has(datasetId)) {
+      // Two dimensions and not excluded - use simple 2D processor
+      this._logProcessing(datasetId, 'Routing to two dimension processor');
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
-      // Three or more dimensions (complex multi-dimensional data) OR datasets requiring numeric indices
+      // Multi-dimensional or excluded from 2D - use complex processor
+      this._logProcessing(datasetId, 'Routing to multi-dimensional processor');
       return this._processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId, lang);
     }
   }
@@ -740,43 +1069,10 @@ export class DataProcessingService {
     // Filter out empty years first
     const validYears = years.filter(year => year && year.toString().trim() !== '');
 
-    // Get year labels to convert indices to actual years
+    // Get year labels and region mappings from configuration
     const yearLabels = this._getCategoryLabels(dataset, yearDimId);
-
-    // Region ID mapping - mapping dataset indices to provided region IDs
-    // Dataset has region indices 0-12, mapping them to the provided region IDs
-    const regionIndexToIdMapping = {
-      "0": 1,    // GE-TB
-      "1": -2,   // GE-AB
-      "2": 2,    // GE-AJ
-      "3": 3,    // GE-GU
-      "4": 4,    // GE-IM
-      "5": 5,    // GE-KA
-      "6": 6,    // GE-MM
-      "7": 7,    // GE-RL
-      "8": 8,    // GE-SZ
-      "9": 9,    // GE-SJ
-      "10": 10,  // GE-KK
-      "11": 11,  // GE-SK
-      "12": 12   // Additional region (if any)
-    };
-
-    // Original region codes for reference
-    const regionCodeMapping = {
-      "0": "GE-TB",
-      "1": "GE-AB", 
-      "2": "GE-AJ",
-      "3": "GE-GU",
-      "4": "GE-IM",
-      "5": "GE-KA",
-      "6": "GE-MM",
-      "7": "GE-RL",
-      "8": "GE-SZ",
-      "9": "GE-SJ",
-      "10": "GE-KK",
-      "11": "GE-SK",
-      "12": "UNKNOWN"
-    };
+    const regionIndexToIdMapping = DataProcessingService.FOREST_FIRES_REGION_MAPPINGS.indexToId;
+    const regionCodeMapping = DataProcessingService.FOREST_FIRES_REGION_MAPPINGS.indexToCode;
 
     // This dataset has 3 dimensions: Year, Regions, and Category
     const regionDim = otherDims.find(dim => dim.toLowerCase().includes('region')) || otherDims[0];
@@ -792,7 +1088,7 @@ export class DataProcessingService {
     // Create a row for each valid year with actual years
     validYears.forEach((year, yearIndex) => {
       // Simplified year parsing with clear fallback strategy
-      let actualYear = this._parseYear(year, yearIndex, yearLabels);
+      let actualYear = this._parseYear(year, yearIndex, yearLabels, 'forest-fires');
       // console.log(actualYear, "actualYear");
       
       const row = { year: actualYear }; // Use actual year instead of numeric index
@@ -2163,38 +2459,145 @@ export class DataProcessingService {
   }
 
   /**
-   * Parse year from various formats with fallback strategy
-   * @param {string|number} year - Year identifier from dataset
-   * @param {number} yearIndex - Sequential index of the year
-   * @param {Object} yearLabels - Year labels mapping from dataset
-   * @returns {number} - Parsed year value
+   * HELPER METHOD: Universal year parsing with 4-tier fallback strategy
+   * ===================================================================
+   * 
+   * This method centralizes all year parsing logic to ensure consistency across datasets.
+   * It tries multiple strategies in order of reliability to extract actual years.
+   * 
+   * STRATEGY BREAKDOWN:
+   * 1. Direct conversion: "2023" → 2023 (most reliable)
+   * 2. Label parsing: yearLabels["0"] = "2023" → 2023 (dataset-provided)
+   * 3. Configuration mapping: DATASET_YEAR_MAPPINGS["forest-fires"]["0"] = 2017 (configured)
+   * 4. Sequential fallback: 2017 + index (last resort)
+   * 
+   * MAINTENANCE NOTES:
+   * - Add new datasets to DATASET_YEAR_MAPPINGS instead of modifying this method
+   * - Update fallback start year (2017) only if globally appropriate
+   * - Test with: console.log('Parsed year:', result, 'from input:', year)
+   * 
+   * USAGE EXAMPLES:
+   * - _parseYear("2023", 0, {}, null) → 2023 (direct)
+   * - _parseYear("0", 0, {"0": "2023"}, null) → 2023 (label)
+   * - _parseYear("0", 0, {}, "forest-fires") → 2017 (config)
+   * - _parseYear("abc", 5, {}, null) → 2022 (fallback: 2017 + 5)
+   * 
+   * @param {string|number} year - Year identifier from dataset (could be index or actual year)
+   * @param {number} yearIndex - Sequential position of this year in the dataset (0-based)
+   * @param {Object} yearLabels - Year labels from dataset (yearId → yearText mapping)
+   * @param {string} datasetId - Dataset identifier for configuration lookup
+   * @returns {number} - Actual year as integer (e.g., 2023)
    */
-  _parseYear(year, yearIndex, yearLabels = {}) {
-    // Strategy 1: Try direct number conversion
+  _parseYear(year, yearIndex, yearLabels = {}, datasetId = null) {
+    // STRATEGY 1: Try direct number conversion (e.g., "2023" → 2023)
     const directYear = Number(year);
-    if (!isNaN(directYear) && directYear > 1900 && directYear < 3000) {
+    if (this._isValidYear(directYear)) {
+      this._logProcessing(datasetId, `Year parsed directly: ${year} → ${directYear}`);
       return directYear;
     }
 
-    // Strategy 2: Try year labels from dataset
-    if (yearLabels && yearLabels[year]) {
+    // STRATEGY 2: Try year labels from dataset (e.g., yearLabels["0"] = "2023")
+    if (yearLabels?.[year]) {
       const labelYear = parseInt(yearLabels[year]);
-      if (!isNaN(labelYear) && labelYear > 1900 && labelYear < 3000) {
+      if (this._isValidYear(labelYear)) {
+        this._logProcessing(datasetId, `Year parsed from label: ${year} → ${yearLabels[year]} → ${labelYear}`);
         return labelYear;
       }
     }
 
-    // Strategy 3: Forest-fires specific mapping (for backward compatibility)
-    const forestFiresYearMap = {
-      '0': 2017, '1': 2018, '2': 2019, '3': 2020, 
-      '4': 2021, '5': 2022, '6': 2023
-    };
-    if (forestFiresYearMap[year]) {
-      return forestFiresYearMap[year];
+    // STRATEGY 3: Dataset-specific mapping from configuration
+    if (datasetId && DataProcessingService.DATASET_YEAR_MAPPINGS[datasetId]?.[year]) {
+      const mappedYear = DataProcessingService.DATASET_YEAR_MAPPINGS[datasetId][year];
+      this._logProcessing(datasetId, `Year parsed from config: ${year} → ${mappedYear}`);
+      return mappedYear;
     }
 
-    // Strategy 4: Sequential fallback (assume starting from 2017)
-    return 2017 + yearIndex;
+    // STRATEGY 4: Sequential fallback (last resort)
+    const fallbackYear = 2017 + yearIndex;
+    this._logProcessing(datasetId, `Year fallback used: index ${yearIndex} → ${fallbackYear}`, { originalYear: year });
+    return fallbackYear;
+  }
+
+  /**
+   * HELPER METHOD: Year validation utility
+   * =====================================
+   * 
+   * Validates if a parsed number represents a reasonable year.
+   * Prevents invalid years from being used in processing.
+   * 
+   * VALIDATION RANGE: 1900-3000 (adjustable for future datasets)
+   * 
+   * @param {number} year - Year to validate
+   * @returns {boolean} - True if year is valid and reasonable
+   */
+  _isValidYear(year) {
+    return !isNaN(year) && year > 1900 && year < 3000;
+  }
+
+  /**
+   * HELPER METHOD: Standardized category mapping creation
+   * ====================================================
+   * 
+   * Creates consistent category mapping structure for datasets that use numeric indices.
+   * This ensures all datasets return the same metadata format for frontend consumption.
+   * 
+   * OUTPUT FORMAT:
+   * [
+   *   { index: "0", id: "originalId", label: "Original Label" },
+   *   { index: "1", id: "anotherId", label: "Another Label" }
+   * ]
+   * 
+   * MAINTENANCE NOTES:
+   * - Use this method instead of creating mappings manually
+   * - Consistent structure helps frontend handle all datasets uniformly
+   * - Add logging parameter if debugging category issues
+   * 
+   * @param {Array} categoryIds - Original category IDs from dataset
+   * @param {Object} categoryLabels - Category labels mapping (id → label)
+   * @param {string} datasetId - Dataset identifier for logging/debugging
+   * @returns {Array} - Standardized category mapping array
+   */
+  _createNumericCategoryMapping(categoryIds, categoryLabels, datasetId) {
+    const mapping = categoryIds.map((categoryId, index) => ({
+      index: index.toString(),
+      id: categoryId,
+      label: categoryLabels[categoryId] || categoryId
+    }));
+    
+    this._logProcessing(datasetId, `Created category mapping for ${categoryIds.length} categories`);
+    return mapping;
+  }
+
+  /**
+   * HELPER METHOD: Development logging utility
+   * =========================================
+   * 
+   * Provides consistent logging for debugging dataset processing issues.
+   * Only active in development environment to avoid production noise.
+   * 
+   * LOG FORMAT: [DataProcessing:dataset-id] message {data}
+   * 
+   * USAGE:
+   * - Processor routing decisions
+   * - Year parsing outcomes  
+   * - Configuration lookups
+   * - Error conditions
+   * 
+   * MAINTENANCE NOTES:
+   * - Use this instead of console.log directly
+   * - Include datasetId and meaningful message
+   * - Add relevant data object for complex debugging
+   * 
+   * @param {string} datasetId - Dataset identifier for context
+   * @param {string} message - Descriptive log message
+   * @param {Object} data - Additional data to include in log
+   */
+  _logProcessing(datasetId, message, data = {}) {
+    if (process.env.NODE_ENV === 'development') {
+      const logPrefix = `[DataProcessing:${datasetId || 'unknown'}]`;
+      const hasData = Object.keys(data).length > 0;
+      console.log(`${logPrefix} ${message}${hasData ? '' : ''}`, hasData ? data : '');
+    }
   }
 }
 
