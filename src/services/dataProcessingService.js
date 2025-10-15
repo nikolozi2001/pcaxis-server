@@ -740,6 +740,41 @@ export class DataProcessingService {
     // Filter out empty years first
     const validYears = years.filter(year => year && year.toString().trim() !== '');
 
+    // Region ID mapping - mapping dataset indices to provided region IDs
+    // Dataset has region indices 0-12, mapping them to the provided region IDs
+    const regionIndexToIdMapping = {
+      "0": 1,    // GE-TB
+      "1": -2,   // GE-AB
+      "2": 2,    // GE-AJ
+      "3": 3,    // GE-GU
+      "4": 4,    // GE-IM
+      "5": 5,    // GE-KA
+      "6": 6,    // GE-MM
+      "7": 7,    // GE-RL
+      "8": 8,    // GE-SZ
+      "9": 9,    // GE-SJ
+      "10": 10,  // GE-KK
+      "11": 11,  // GE-SK
+      "12": 12   // Additional region (if any)
+    };
+
+    // Original region codes for reference
+    const regionCodeMapping = {
+      "0": "GE-TB",
+      "1": "GE-AB", 
+      "2": "GE-AJ",
+      "3": "GE-GU",
+      "4": "GE-IM",
+      "5": "GE-KA",
+      "6": "GE-MM",
+      "7": "GE-RL",
+      "8": "GE-SZ",
+      "9": "GE-SJ",
+      "10": "GE-KK",
+      "11": "GE-SK",
+      "12": "UNKNOWN"
+    };
+
     // This dataset has 3 dimensions: Year, Regions, and Category
     const regionDim = otherDims.find(dim => dim.toLowerCase().includes('region')) || otherDims[0];
     const categoryDim = otherDims.find(dim => dim.toLowerCase().includes('category')) || otherDims[1];
@@ -763,8 +798,7 @@ export class DataProcessingService {
       const row = { year: actualYear }; // Use actual year instead of numeric index
       let hasData = false;
 
-      let seriesIndex = 0;
-      // Combine regions and categories to create series
+      // Use region IDs as keys with category suffix
       regionValues.forEach((regionId) => {
         categoryValues.forEach((categoryId) => {
           const queryObj = { 
@@ -775,15 +809,14 @@ export class DataProcessingService {
           const cell = dataset.Data(queryObj);
           const value = cell ? Number(cell.value) : null;
           
-          // Create combined label for region-category combination
-          const regionLabel = regionLabels[regionId] || regionId;
-          const categoryLabel = categoryLabels[categoryId] || categoryId;
-          row[`${seriesIndex} - ${categoryId}`] = value;
+          // Use region mapped ID as the key with category suffix
+          const regionMappedId = regionIndexToIdMapping[regionId] || regionId;
+          const key = `${regionMappedId}_${categoryId}`;
+          row[key] = value;
           
           if (value !== null && value !== undefined) {
             hasData = true;
           }
-          seriesIndex++;
         });
       });
 
@@ -800,32 +833,51 @@ export class DataProcessingService {
     };
     const actualYears = data.map(row => row.year);
 
-    // Create combined labels for regions and categories
-    const combinedLabels = [];
+    // Create categories and mapping using region IDs with category suffix
+    const categories = [];
+    const categoryMapping = [];
+    
     regionValues.forEach((regionId) => {
       categoryValues.forEach((categoryId) => {
         const regionLabel = regionLabels[regionId] || regionId;
         const categoryLabel = categoryLabels[categoryId] || categoryId;
-        combinedLabels.push(`${regionId} - ${categoryId}`);
+        const regionMappedId = regionIndexToIdMapping[regionId] || regionId;
+        const regionCode = regionCodeMapping[regionId] || regionId;
+        
+        // Use region mapped ID with category suffix as the key
+        const key = `${regionMappedId}_${categoryId}`;
+        categories.push(key);
+        
+        categoryMapping.push({
+          key: key,
+          regionId: regionId,
+          regionCode: regionCode,
+          regionMappedId: regionMappedId,
+          regionLabel: regionLabel,
+          categoryId: categoryId,
+          categoryLabel: categoryLabel,
+          label: `${regionCode} - ${categoryLabel}`
+        });
       });
     });
+
+    const totalSeries = regionValues.length * categoryValues.length;
 
     return {
       title: dataset.label || 'ტყისა და ველის ხანძრები რეგიონების მიხედვით',
       dimensions: [yearDimId, regionDim, categoryDim],
-      categories: combinedLabels,
+      categories: categories, // Use region ID with category suffix as keys
       data: data,
       metadata: {
         totalRecords: data.length,
         hasCategories: true,
         yearRange: this._getYearRange(actualYears), // Use actual years for range
         dimensionCount: otherDims.length + 1,
-        seriesCount: combinedLabels.length,
+        seriesCount: totalSeries,
         yearMapping: actualYears.map((actualYear, index) => ({ index: index.toString(), value: actualYear })), // Use actual years in mapping
-        categoryMapping: combinedLabels.map((label, index) => ({
-          index: index.toString(),
-          label: label
-        })) // Provide category mapping
+        categoryMapping: categoryMapping, // Provide detailed category mapping with region IDs
+        regionIndexToIdMapping: regionIndexToIdMapping, // Include the region index to ID mapping
+        regionCodeMapping: regionCodeMapping // Include the region code mapping for reference
       }
     };
   }
