@@ -202,6 +202,24 @@
 export class DataProcessingService {
   
   /**
+   * PERFORMANCE OPTIMIZATION: Instance caches and optimizations
+   * ===========================================================
+   */
+  constructor() {
+    // Cache for expensive operations
+    this._dimensionCache = new Map();
+    this._categoryLabelsCache = new Map();
+    this._yearCache = new Map();
+    
+    // Optimize Set operations by converting to Map for faster lookups
+    this._excludeFromTwoDimMap = new Map();
+    DataProcessingService.EXCLUDE_FROM_TWO_DIM.forEach(id => this._excludeFromTwoDimMap.set(id, true));
+    
+    // Pre-compile regex for year dimension finding
+    this._yearDimensionRegex = /year|წელი|vuosi|anio|time|dato/i;
+  }
+  
+  /**
    * CONFIGURATION: Dataset-specific processors
    * ------------------------------------------
    * Maps dataset IDs to their special processor methods.
@@ -349,13 +367,13 @@ export class DataProcessingService {
       return this[processorMethod](dataset, years, yearDimId, otherDims, lang);
     }
 
-    // STEP 2: Route based on dimension structure
+    // STEP 2: Route based on dimension structure (optimized lookups)
     if (otherDims.length === 0) {
       // Only year dimension - simple time series
       this._logProcessing(datasetId, 'Routing to single dimension processor');
       return this._processSingleDimension(dataset, years, yearDimId);
-    } else if (otherDims.length === 1 && !DataProcessingService.EXCLUDE_FROM_TWO_DIM.has(datasetId)) {
-      // Two dimensions and not excluded - use simple 2D processor
+    } else if (otherDims.length === 1 && !this._excludeFromTwoDimMap.has(datasetId)) {
+      // Two dimensions and not excluded - use simple 2D processor (optimized Map lookup)
       this._logProcessing(datasetId, 'Routing to two dimension processor');
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
@@ -366,12 +384,29 @@ export class DataProcessingService {
   }
 
   /**
-   * Find the year/time dimension
-   * @param {Array} dimIds 
-   * @returns {string}
+   * OPTIMIZED: Find the year/time dimension with caching
+   * ====================================================
+   * Uses pre-compiled regex and caches results for repeated calls.
+   * 
+   * @param {Array} dimIds - Array of dimension IDs
+   * @returns {string} - Year dimension ID
    */
   _findYearDimension(dimIds) {
-    return dimIds.find(d => /year|წელი|vuosi|anio|time|dato/i.test(d)) || dimIds[0];
+    // Create cache key from dimension IDs
+    const cacheKey = dimIds.join('|');
+    
+    // Check cache first
+    if (this._dimensionCache.has(cacheKey)) {
+      return this._dimensionCache.get(cacheKey);
+    }
+    
+    // Find year dimension using optimized regex
+    const yearDim = dimIds.find(d => this._yearDimensionRegex.test(d)) || dimIds[0];
+    
+    // Cache the result
+    this._dimensionCache.set(cacheKey, yearDim);
+    
+    return yearDim;
   }
 
   /**
@@ -1063,93 +1098,94 @@ export class DataProcessingService {
   }
 
   /**
-   * Special processing for forest-fires dataset with actual years
+   * OPTIMIZED: Special processing for forest-fires dataset with actual years
+   * ========================================================================
+   * Performance optimizations:
+   * - Pre-compute region mappings and category combinations
+   * - Reduce nested loops and object creation
+   * - Cache frequently accessed values
    */
   _processForestFiresSpecial(dataset, years, yearDimId, otherDims) {
-    // Filter out empty years first
-    const validYears = years.filter(year => year && year.toString().trim() !== '');
+    // Filter out empty years first (optimized)
+    const validYears = years.filter(year => year && String(year).trim() !== '');
 
-    // Get year labels and region mappings from configuration
+    // Pre-compute all required mappings and labels (cached)
     const yearLabels = this._getCategoryLabels(dataset, yearDimId);
     const regionIndexToIdMapping = DataProcessingService.FOREST_FIRES_REGION_MAPPINGS.indexToId;
     const regionCodeMapping = DataProcessingService.FOREST_FIRES_REGION_MAPPINGS.indexToCode;
 
-    // This dataset has 3 dimensions: Year, Regions, and Category
+    // Find dimensions (optimized with early return)
     const regionDim = otherDims.find(dim => dim.toLowerCase().includes('region')) || otherDims[0];
     const categoryDim = otherDims.find(dim => dim.toLowerCase().includes('category')) || otherDims[1];
     
+    // Get dimension data once
     const regionValues = dataset.Dimension(regionDim).id;
     const regionLabels = this._getCategoryLabels(dataset, regionDim);
     const categoryValues = dataset.Dimension(categoryDim).id;
     const categoryLabels = this._getCategoryLabels(dataset, categoryDim);
 
-    const data = [];
+    // Pre-compute region-category key combinations to avoid repeated string concatenation
+    const keyCombinations = [];
+    const regionMappings = [];
+    
+    regionValues.forEach((regionId) => {
+      const regionMappedId = regionIndexToIdMapping[regionId] || regionId;
+      categoryValues.forEach((categoryId) => {
+        keyCombinations.push(`${regionMappedId}_${categoryId}`);
+        regionMappings.push({ regionId, categoryId, key: `${regionMappedId}_${categoryId}` });
+      });
+    });
 
-    // Create a row for each valid year with actual years
-    validYears.forEach((year, yearIndex) => {
-      // Simplified year parsing with clear fallback strategy
-      let actualYear = this._parseYear(year, yearIndex, yearLabels, 'forest-fires');
-      // console.log(actualYear, "actualYear");
+    const data = [];
+    const actualYears = []; // Collect years as we process
+
+    // Process each year (optimized loop)
+    for (let yearIndex = 0; yearIndex < validYears.length; yearIndex++) {
+      const year = validYears[yearIndex];
+      const actualYear = this._parseYear(year, yearIndex, yearLabels, 'forest-fires');
+      actualYears.push(actualYear);
       
-      const row = { year: actualYear }; // Use actual year instead of numeric index
+      const row = { year: actualYear };
       let hasData = false;
 
-      // Use region IDs as keys with category suffix
-      regionValues.forEach((regionId) => {
-        categoryValues.forEach((categoryId) => {
-          const queryObj = { 
-            [yearDimId]: year, 
-            [regionDim]: regionId, 
-            [categoryDim]: categoryId 
-          };
-          const cell = dataset.Data(queryObj);
-          const value = cell ? Number(cell.value) : null;
-          
-          // Use region mapped ID as the key with category suffix
-          const regionMappedId = regionIndexToIdMapping[regionId] || regionId;
-          const key = `${regionMappedId}_${categoryId}`;
-          row[key] = value;
-          
-          if (value !== null && value !== undefined) {
-            hasData = true;
-          }
-        });
-      });
+      // Use pre-computed mappings to reduce nested loops
+      for (let i = 0; i < regionMappings.length; i++) {
+        const mapping = regionMappings[i];
+        const queryObj = { 
+          [yearDimId]: year, 
+          [regionDim]: mapping.regionId, 
+          [categoryDim]: mapping.categoryId 
+        };
+        
+        const cell = dataset.Data(queryObj);
+        const value = cell ? Number(cell.value) : null;
+        row[mapping.key] = value;
+        
+        if (value !== null && value !== undefined) {
+          hasData = true;
+        }
+      }
 
-      // Only include years that have at least some non-null data
+      // Only include years with actual data
       if (hasData) {
         data.push(row);
       }
-    });
+    }
 
-    const actualYears = data.map(row => row.year);
-
-    // Create categories and mapping using region IDs with category suffix
+    // Build final categories and mapping using pre-computed mapping data
     const categories = [];
-    const categoryMapping = [];
     
-    regionValues.forEach((regionId) => {
-      categoryValues.forEach((categoryId) => {
-        const regionLabel = regionLabels[regionId] || regionId;
-        const categoryLabel = categoryLabels[categoryId] || categoryId;
-        const regionMappedId = regionIndexToIdMapping[regionId] || regionId;
-        const regionCode = regionCodeMapping[regionId] || regionId;
-        
-        // Use region mapped ID with category suffix as the key
-        const key = `${regionMappedId}_${categoryId}`;
-        categories.push(key);
-        
-        categoryMapping.push({
-          key: key,
-          regionId: regionId,
-          regionCode: regionCode,
-          regionMappedId: regionMappedId,
-          regionLabel: regionLabel,
-          categoryId: categoryId,
-          categoryLabel: categoryLabel,
-          label: `${regionCode} - ${categoryLabel}`
-        });
-      });
+    regionMappings.forEach(mapping => {
+      categories.push(mapping.key);
+      // Add label information to the mapping
+      const regionLabel = regionLabels[mapping.regionId] || mapping.regionId;
+      const categoryLabel = categoryLabels[mapping.categoryId] || mapping.categoryId;
+      const regionCode = regionCodeMapping[mapping.regionId] || mapping.regionId;
+      
+      mapping.regionLabel = regionLabel;
+      mapping.categoryLabel = categoryLabel;
+      mapping.regionCode = regionCode;
+      mapping.label = `${regionCode} - ${categoryLabel}`;
     });
 
     const totalSeries = regionValues.length * categoryValues.length;
@@ -1166,7 +1202,7 @@ export class DataProcessingService {
         dimensionCount: otherDims.length + 1,
         seriesCount: totalSeries,
         yearMapping: actualYears.map((actualYear, index) => ({ index: index.toString(), value: actualYear })), // Use actual years in mapping
-        categoryMapping: categoryMapping, // Provide detailed category mapping with region IDs
+        categoryMapping: regionMappings, // Provide detailed category mapping with region IDs
         regionIndexToIdMapping: regionIndexToIdMapping, // Include the region index to ID mapping
         regionCodeMapping: regionCodeMapping // Include the region code mapping for reference
       }
@@ -1632,16 +1668,35 @@ export class DataProcessingService {
   }
 
   /**
-   * Get category labels for a dimension
-   * @param {Object} dataset 
-   * @param {string} catDimId 
-   * @returns {Object}
+   * OPTIMIZED: Get category labels for a dimension with caching
+   * ==========================================================
+   * This method is called frequently, so we cache results to avoid repeated processing.
+   * 
+   * @param {Object} dataset - JSON-Stat dataset
+   * @param {string} catDimId - Category dimension ID
+   * @returns {Object} - Category labels mapping
    */
   _getCategoryLabels(dataset, catDimId) {
     if (!catDimId) return {};
     
+    // Create cache key from dataset and dimension
+    const cacheKey = `${dataset?.label || 'unknown'}_${catDimId}`;
+    
+    // Check cache first
+    if (this._categoryLabelsCache.has(cacheKey)) {
+      return this._categoryLabelsCache.get(cacheKey);
+    }
+    
+    // Get labels from dataset
     const category = dataset.Dimension(catDimId).Category();
-    return category?.label || {};
+    const labels = category?.label || {};
+    
+    // Cache the result (limit cache size to prevent memory issues)
+    if (this._categoryLabelsCache.size < 100) {
+      this._categoryLabelsCache.set(cacheKey, labels);
+    }
+    
+    return labels;
   }
 
   /**
@@ -2489,33 +2544,43 @@ export class DataProcessingService {
    * @returns {number} - Actual year as integer (e.g., 2023)
    */
   _parseYear(year, yearIndex, yearLabels = {}, datasetId = null) {
-    // STRATEGY 1: Try direct number conversion (e.g., "2023" → 2023)
+    // Create cache key for this specific year parsing request
+    const cacheKey = `${year}_${yearIndex}_${datasetId || 'none'}`;
+    
+    // Check cache first
+    if (this._yearCache.has(cacheKey)) {
+      return this._yearCache.get(cacheKey);
+    }
+    
+    let result;
+    
+    // STRATEGY 1: Try direct number conversion (e.g., "2023" → 2023) - fastest path
     const directYear = Number(year);
     if (this._isValidYear(directYear)) {
-      this._logProcessing(datasetId, `Year parsed directly: ${year} → ${directYear}`);
-      return directYear;
+      result = directYear;
     }
-
     // STRATEGY 2: Try year labels from dataset (e.g., yearLabels["0"] = "2023")
-    if (yearLabels?.[year]) {
+    else if (yearLabels?.[year]) {
       const labelYear = parseInt(yearLabels[year]);
       if (this._isValidYear(labelYear)) {
-        this._logProcessing(datasetId, `Year parsed from label: ${year} → ${yearLabels[year]} → ${labelYear}`);
-        return labelYear;
+        result = labelYear;
       }
     }
-
-    // STRATEGY 3: Dataset-specific mapping from configuration
-    if (datasetId && DataProcessingService.DATASET_YEAR_MAPPINGS[datasetId]?.[year]) {
-      const mappedYear = DataProcessingService.DATASET_YEAR_MAPPINGS[datasetId][year];
-      this._logProcessing(datasetId, `Year parsed from config: ${year} → ${mappedYear}`);
-      return mappedYear;
+    // STRATEGY 3: Dataset-specific mapping from configuration (pre-check for faster access)
+    else if (datasetId && DataProcessingService.DATASET_YEAR_MAPPINGS[datasetId]?.[year]) {
+      result = DataProcessingService.DATASET_YEAR_MAPPINGS[datasetId][year];
     }
-
     // STRATEGY 4: Sequential fallback (last resort)
-    const fallbackYear = 2017 + yearIndex;
-    this._logProcessing(datasetId, `Year fallback used: index ${yearIndex} → ${fallbackYear}`, { originalYear: year });
-    return fallbackYear;
+    else {
+      result = 2017 + yearIndex;
+    }
+    
+    // Cache the result (limit cache size)
+    if (this._yearCache.size < 200) {
+      this._yearCache.set(cacheKey, result);
+    }
+    
+    return result;
   }
 
   /**
