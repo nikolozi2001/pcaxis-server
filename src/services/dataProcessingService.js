@@ -1830,6 +1830,16 @@ export class DataProcessingService {
           // Add corresponding values index
           originalValues.push(originalValues.length.toString());
         }
+
+        // Special handling for atmospheric-precipitation dataset to add calculated field
+        if (datasetId === 'atmospheric-precipitation' && v.code === 'Precipitation categories') {
+          // Add the calculated field "გადახრა" to valueTexts
+          const calculatedFieldText = 'გადახრა';
+          
+          valueTexts = [...valueTexts, calculatedFieldText];
+          // Add corresponding values index
+          originalValues.push(originalValues.length.toString());
+        }
         
         return {
           code: v.code,
@@ -2237,6 +2247,13 @@ export class DataProcessingService {
       });
     });
 
+    // Add "გადახრა" categories for each location
+    locationValues.forEach(locationId => {
+      const locationLabel = locationLabels[locationId] || locationId;
+      combinedLabels.push(`${locationLabel} - გადახრა`);
+      categoryIndex++;
+    });
+
     // Get year labels to convert indices to actual years  
     const yearLabels = this._getCategoryLabels(dataset, yearDimId);
 
@@ -2250,8 +2267,10 @@ export class DataProcessingService {
       
       // Create data for each location-precipitation combination with numeric indices
       let comboIndex = 0;
+      const deviationValues = []; // Store deviation values for calculating "გადახრა"
+      
       locationValues.forEach(locationId => {
-        precipitationValues.forEach(precipitationId => {
+        precipitationValues.forEach((precipitationId, precipitationIndex) => {
           const queryObj = { 
             [yearDimId]: year, 
             [locationDim]: locationId, 
@@ -2263,12 +2282,25 @@ export class DataProcessingService {
           // Use numeric index as key instead of combined label
           row[comboIndex.toString()] = value;
           
+          // Store deviation values (index 2 = "ნალექის წლიური გადახრა...")
+          if (precipitationIndex === 2 && value !== null && value !== undefined) {
+            deviationValues.push(value);
+          }
+          
           if (value !== null && value !== undefined) {
             hasData = true;
           }
           
           comboIndex++;
         });
+      });
+      
+      // Add calculated "გადახრა" values (deviation values minus 1)
+      deviationValues.forEach(deviationValue => {
+        const calculatedValue = deviationValue - 1;
+        row[comboIndex.toString()] = calculatedValue;
+        comboIndex++;
+        hasData = true;
       });
       
       // Only include years with actual data
@@ -2278,7 +2310,7 @@ export class DataProcessingService {
     });
 
     const actualYears = data.map(row => row.year);
-    const totalSeries = locationValues.length * precipitationValues.length;
+    const totalSeries = (locationValues.length * precipitationValues.length) + locationValues.length; // Original series + გადახრა series
 
     return {
       title: dataset.label || 'Atmospheric Precipitation',
