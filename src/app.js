@@ -34,8 +34,22 @@ export function createApp() {
     next();
   });
 
+  // Serve static dashboard
+  app.use(express.static('./', { 
+    setHeaders: (res, path) => {
+      if (path.endsWith('.html')) {
+        res.set('Content-Type', 'text/html');
+      }
+    }
+  }));
+  
   // Routes
   app.use('/api', routes);
+  
+  // Dashboard route
+  app.get('/dashboard', (req, res) => {
+    res.sendFile('dashboard.html', { root: './' });
+  });
   
   // Root endpoint
   app.get('/', (req, res) => {
@@ -46,7 +60,9 @@ export function createApp() {
       environment: config.server.env,
       api: '/api',
       health: '/health',
+      dashboard: '/dashboard',
       documentation: {
+        'Performance Dashboard': 'GET /dashboard',
         'Available datasets': 'GET /api/datasets',
         'Dataset metadata': 'GET /api/datasets/:id/metadata',
         'Dataset data': 'GET /api/datasets/:id/data',
