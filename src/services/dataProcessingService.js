@@ -740,6 +740,9 @@ export class DataProcessingService {
     // Filter out empty years first
     const validYears = years.filter(year => year && year.toString().trim() !== '');
 
+    // Get year labels to convert indices to actual years
+    const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+
     // Region ID mapping - mapping dataset indices to provided region IDs
     // Dataset has region indices 0-12, mapping them to the provided region IDs
     const regionIndexToIdMapping = {
@@ -788,13 +791,51 @@ export class DataProcessingService {
 
     // Create a row for each valid year with actual years
     validYears.forEach((year, yearIndex) => {
-      // Forest fires years mapping: 0->2017, 1->2018, 2->2019, 3->2020, 4->2021, 5->2022, 6->2023
-      const yearMappings = {
-        '0': 2017, '1': 2018, '2': 2019, '3': 2020, 
-        '4': 2021, '5': 2022, '6': 2023
-      };
+      // Try multiple approaches to get the actual year
+      let actualYear = Number(year) || year || (2017 + yearIndex); // Default mapping starting from 2017
       
-      let actualYear = yearMappings[year] || year;
+      // First try parsing year labels if they exist
+      if (yearLabels && yearLabels[year]) {
+        const yearLabel = yearLabels[year];
+        const parsedYear = parseInt(yearLabel);
+        
+        if (!isNaN(parsedYear)) {
+          actualYear = parsedYear;
+        }
+      } else {
+        // If no year labels, try using index-based mapping for forest-fires
+        // This is a fallback for datasets that use index-based years
+        
+        // Build a dynamic mapping from dataset index -> actual year.
+        // Try to use category value texts (if present), otherwise fall back to parsing the index or a start year.
+        const yearValuesDynamic = this._getCategoryValues(dataset, yearDimId);
+        const fallbackStartYear = 2017;
+        const indexToYearMap = {};
+
+        if (Array.isArray(yearValuesDynamic) && yearValuesDynamic.length >= validYears.length) {
+          // Map each valid year index to the corresponding valueText (if it parses to a number),
+          // otherwise fall back to parsing the index or to a sequential fallback year.
+          validYears.forEach((y, i) => {
+            const candidate = yearValuesDynamic[i];
+            const parsedCandidate = parseInt(candidate);
+            if (!isNaN(parsedCandidate)) {
+              indexToYearMap[y] = parsedCandidate;
+            } else {
+              const parsedIndex = parseInt(y);
+              indexToYearMap[y] = !isNaN(parsedIndex) ? parsedIndex : (fallbackStartYear + i);
+            }
+          });
+        } else {
+          // No dynamic valueTexts available — try to parse the provided index, else use a sequential fallback.
+          validYears.forEach((y, i) => {
+            const parsedIndex = parseInt(y);
+            indexToYearMap[y] = !isNaN(parsedIndex) ? parsedIndex : (fallbackStartYear + i);
+          });
+        }
+        if (indexToYearMap[year]) {
+          actualYear = indexToYearMap[year];
+        }
+      }
       const row = { year: actualYear }; // Use actual year instead of numeric index
       let hasData = false;
 
@@ -826,11 +867,6 @@ export class DataProcessingService {
       }
     });
 
-    // Collect actual years for metadata using the same mapping (only for years with data)
-    const yearMappings = {
-      '0': 2017, '1': 2018, '2': 2019, '3': 2020, 
-      '4': 2021, '5': 2022, '6': 2023
-    };
     const actualYears = data.map(row => row.year);
 
     // Create categories and mapping using region IDs with category suffix
