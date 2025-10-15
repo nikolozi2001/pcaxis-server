@@ -263,7 +263,8 @@ export class DataProcessingService {
     'illegal-logging', 'forest-planting-recovery', 'municipal-waste',
     'fertilizer-use', 'geological-phenomena', 'final-energy-consumption',
     'primary-energy-supply', 'energy-intensity', 'protected-areas-mammals',
-    'protected-areas-categories', 'protected-areas-birds', 'timber-by-cutting-purpose'
+    'protected-areas-categories', 'protected-areas-birds', 'timber-by-cutting-purpose',
+    'atmospheric-precipitation'
   ]);
 
   /**
@@ -595,6 +596,11 @@ export class DataProcessingService {
     // Special handling for timber-by-cutting-purpose dataset (treat as multi-dimensional with numeric indices)
     if (datasetId === 'timber-by-cutting-purpose') {
       return this._processTimberByCuttingPurposeSpecial(dataset, years, yearDimId, otherDims, lang);
+    }
+
+    // Special handling for atmospheric-precipitation dataset (treat as multi-dimensional with numeric indices)
+    if (datasetId === 'atmospheric-precipitation') {
+      return this._processAtmosphericPrecipitationSpecial(dataset, years, yearDimId, otherDims, lang);
     }
 
     // Default processing for other datasets
@@ -2186,6 +2192,106 @@ export class DataProcessingService {
         yearRange: this._getYearRange(actualYears),
         dimensionCount: otherDims.length + 1,
         seriesCount: totalSeries,
+        categoryMapping: combinedLabels.map((label, index) => ({ 
+          index: index.toString(), 
+          label: label 
+        })) // Provide category mapping for metadata API
+      }
+    };
+  }
+
+  /**
+   * Special processing for atmospheric-precipitation dataset with numeric indices
+   * 
+   * This dataset has 3 dimensions:
+   * - Locations (GEO, TBILISI, SAMEGRELO, KVEMO_KARTLI)
+   * - Years (1990-2014)  
+   * - Precipitation categories (HISTORICAL_AVG, ANNUAL, DEVIATION, MAX_MONTHLY, MIN_MONTHLY)
+   * 
+   * Returns numeric indices "0", "1", "2"... instead of category names like "GEO - HISTORICAL_AVG"
+   */
+  _processAtmosphericPrecipitationSpecial(dataset, years, yearDimId, otherDims, lang = 'ka') {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && year.toString().trim() !== '');
+
+    // Get dimensions - should be Locations and Precipitation categories
+    const locationDim = otherDims.find(dim => dim.toLowerCase().includes('location')) || otherDims[0];
+    const precipitationDim = otherDims.find(dim => dim.toLowerCase().includes('precipitation')) || otherDims[1];
+    
+    const locationValues = dataset.Dimension(locationDim).id;
+    const locationLabels = this._getCategoryLabels(dataset, locationDim);
+    const precipitationValues = dataset.Dimension(precipitationDim).id;
+    const precipitationLabels = this._getCategoryLabels(dataset, precipitationDim);
+
+    const data = [];
+    const combinedLabels = [];
+    
+    // Build combined categories (Location - Precipitation Category)
+    let categoryIndex = 0;
+    locationValues.forEach(locationId => {
+      precipitationValues.forEach(precipitationId => {
+        const locationLabel = locationLabels[locationId] || locationId;
+        const precipitationLabel = precipitationLabels[precipitationId] || precipitationId;
+        combinedLabels.push(`${locationLabel} - ${precipitationLabel}`);
+        categoryIndex++;
+      });
+    });
+
+    // Get year labels to convert indices to actual years  
+    const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+
+    // Create a row for each valid year with actual years
+    validYears.forEach((year, yearIndex) => {
+      // Parse year to get actual year value
+      let actualYear = this._parseYear(year, yearIndex, yearLabels, 'atmospheric-precipitation');
+      
+      const row = { year: actualYear };
+      let hasData = false;
+      
+      // Create data for each location-precipitation combination with numeric indices
+      let comboIndex = 0;
+      locationValues.forEach(locationId => {
+        precipitationValues.forEach(precipitationId => {
+          const queryObj = { 
+            [yearDimId]: year, 
+            [locationDim]: locationId, 
+            [precipitationDim]: precipitationId 
+          };
+          const cell = dataset.Data(queryObj);
+          const value = cell ? Number(cell.value) : null;
+          
+          // Use numeric index as key instead of combined label
+          row[comboIndex.toString()] = value;
+          
+          if (value !== null && value !== undefined) {
+            hasData = true;
+          }
+          
+          comboIndex++;
+        });
+      });
+      
+      // Only include years with actual data
+      if (hasData) {
+        data.push(row);
+      }
+    });
+
+    const actualYears = data.map(row => row.year);
+    const totalSeries = locationValues.length * precipitationValues.length;
+
+    return {
+      title: dataset.label || 'Atmospheric Precipitation',
+      dimensions: [yearDimId, locationDim, precipitationDim],
+      categories: Array.from({length: totalSeries}, (_, i) => i.toString()), // Use numeric indices as categories
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(actualYears),
+        dimensionCount: otherDims.length + 1,
+        seriesCount: totalSeries,
+        yearMapping: actualYears.map((actualYear, index) => ({ index: index.toString(), value: actualYear })), // Use actual years in mapping
         categoryMapping: combinedLabels.map((label, index) => ({ 
           index: index.toString(), 
           label: label 
