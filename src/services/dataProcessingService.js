@@ -791,51 +791,10 @@ export class DataProcessingService {
 
     // Create a row for each valid year with actual years
     validYears.forEach((year, yearIndex) => {
-      // Try multiple approaches to get the actual year
-      let actualYear = Number(year) || year || (2017 + yearIndex); // Default mapping starting from 2017
+      // Simplified year parsing with clear fallback strategy
+      let actualYear = this._parseYear(year, yearIndex, yearLabels);
+      // console.log(actualYear, "actualYear");
       
-      // First try parsing year labels if they exist
-      if (yearLabels && yearLabels[year]) {
-        const yearLabel = yearLabels[year];
-        const parsedYear = parseInt(yearLabel);
-        
-        if (!isNaN(parsedYear)) {
-          actualYear = parsedYear;
-        }
-      } else {
-        // If no year labels, try using index-based mapping for forest-fires
-        // This is a fallback for datasets that use index-based years
-        
-        // Build a dynamic mapping from dataset index -> actual year.
-        // Try to use category value texts (if present), otherwise fall back to parsing the index or a start year.
-        const yearValuesDynamic = this._getCategoryValues(dataset, yearDimId);
-        const fallbackStartYear = 2017;
-        const indexToYearMap = {};
-
-        if (Array.isArray(yearValuesDynamic) && yearValuesDynamic.length >= validYears.length) {
-          // Map each valid year index to the corresponding valueText (if it parses to a number),
-          // otherwise fall back to parsing the index or to a sequential fallback year.
-          validYears.forEach((y, i) => {
-            const candidate = yearValuesDynamic[i];
-            const parsedCandidate = parseInt(candidate);
-            if (!isNaN(parsedCandidate)) {
-              indexToYearMap[y] = parsedCandidate;
-            } else {
-              const parsedIndex = parseInt(y);
-              indexToYearMap[y] = !isNaN(parsedIndex) ? parsedIndex : (fallbackStartYear + i);
-            }
-          });
-        } else {
-          // No dynamic valueTexts available — try to parse the provided index, else use a sequential fallback.
-          validYears.forEach((y, i) => {
-            const parsedIndex = parseInt(y);
-            indexToYearMap[y] = !isNaN(parsedIndex) ? parsedIndex : (fallbackStartYear + i);
-          });
-        }
-        if (indexToYearMap[year]) {
-          actualYear = indexToYearMap[year];
-        }
-      }
       const row = { year: actualYear }; // Use actual year instead of numeric index
       let hasData = false;
 
@@ -2201,6 +2160,41 @@ export class DataProcessingService {
         categoryMapping: categoryMapping // Include calculated field mapping
       }
     };
+  }
+
+  /**
+   * Parse year from various formats with fallback strategy
+   * @param {string|number} year - Year identifier from dataset
+   * @param {number} yearIndex - Sequential index of the year
+   * @param {Object} yearLabels - Year labels mapping from dataset
+   * @returns {number} - Parsed year value
+   */
+  _parseYear(year, yearIndex, yearLabels = {}) {
+    // Strategy 1: Try direct number conversion
+    const directYear = Number(year);
+    if (!isNaN(directYear) && directYear > 1900 && directYear < 3000) {
+      return directYear;
+    }
+
+    // Strategy 2: Try year labels from dataset
+    if (yearLabels && yearLabels[year]) {
+      const labelYear = parseInt(yearLabels[year]);
+      if (!isNaN(labelYear) && labelYear > 1900 && labelYear < 3000) {
+        return labelYear;
+      }
+    }
+
+    // Strategy 3: Forest-fires specific mapping (for backward compatibility)
+    const forestFiresYearMap = {
+      '0': 2017, '1': 2018, '2': 2019, '3': 2020, 
+      '4': 2021, '5': 2022, '6': 2023
+    };
+    if (forestFiresYearMap[year]) {
+      return forestFiresYearMap[year];
+    }
+
+    // Strategy 4: Sequential fallback (assume starting from 2017)
+    return 2017 + yearIndex;
   }
 }
 
