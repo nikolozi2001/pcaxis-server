@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PXWeb API Performance Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f5f5f5; 
+            color: #333;
+        }
+        .header { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            padding: 2rem;
+            text-align: center;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 2rem; 
+            margin-bottom: 2rem; 
+        }
+        .card { 
+            background: white; 
+            border-radius: 8px; 
+            padding: 1.5rem; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+        .metric { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 1rem;
+        }
+        .metric-value { font-size: 2rem; font-weight: bold; color: #667eea; }
+        .metric-label { color: #666; }
+        .status-healthy { color: #27ae60; }
+        .status-warning { color: #f39c12; }
+        .status-error { color: #e74c3c; }
+        .refresh-btn { 
+            background: #667eea; 
+            color: white; 
+            border: none; 
+            padding: 0.5rem 1rem; 
+            border-radius: 4px; 
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+        .refresh-btn:hover { background: #5a67d8; }
+        .chart-container { height: 300px; position: relative; }
+        .dataset-list { 
+            max-height: 400px; 
+            overflow-y: auto; 
+            border: 1px solid #ddd; 
+            border-radius: 4px;
+        }
+        .dataset-item { 
+            padding: 1rem; 
+            border-bottom: 1px solid #eee; 
+            display: flex; 
+            justify-content: space-between;
+        }
+        .dataset-item:last-child { border-bottom: none; }
+        .performance-badge { 
+            padding: 0.25rem 0.5rem; 
+            border-radius: 12px; 
+            font-size: 0.8rem; 
+            font-weight: bold;
+        }
+        .fast { background: #d4edda; color: #155724; }
+        .medium { background: #fff3cd; color: #856404; }
+        .slow { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 PXWeb API Performance Dashboard</h1>
+        <p>Real-time monitoring of your optimized data processing service</p>
+    </div>
+    
+    <div class="container">
+        <button class="refresh-btn" onclick="refreshDashboard()">🔄 Refresh Data</button>
+        
+        <div class="grid">
+            <!-- System Health -->
+            <div class="card">
+                <h3>🏥 System Health</h3>
+                <div class="metric">
+                    <span class="metric-label">Status:</span>
+                    <span class="metric-value status-healthy" id="system-status">Healthy</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Uptime:</span>
+                    <span class="metric-value" id="system-uptime">2h 45m</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Memory:</span>
+                    <span class="metric-value" id="system-memory">64MB (45%)</span>
+                </div>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="card">
+                <h3>⚡ Performance</h3>
+                <div class="metric">
+                    <span class="metric-label">Avg Response:</span>
+                    <span class="metric-value" id="avg-response">1.2ms</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Cache Hit Rate:</span>
+                    <span class="metric-value" id="cache-hit-rate">87%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Requests/min:</span>
+                    <span class="metric-value" id="requests-per-min">45</span>
+                </div>
+            </div>
+
+            <!-- Error Tracking -->
+            <div class="card">
+                <h3>🛡️ Error Tracking</h3>
+                <div class="metric">
+                    <span class="metric-label">Error Rate:</span>
+                    <span class="metric-value" id="error-rate">0.2%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Last 24h Errors:</span>
+                    <span class="metric-value" id="total-errors">3</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Retry Success:</span>
+                    <span class="metric-value" id="retry-success">98%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Response Time Chart -->
+        <div class="card">
+            <h3>📈 Response Time Trend</h3>
+            <div class="chart-container">
+                <canvas id="responseTimeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Dataset Performance -->
+        <div class="card">
+            <h3>📊 Dataset Performance</h3>
+            <div class="dataset-list" id="dataset-performance">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let responseTimeChart;
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            refreshDashboard();
+            
+            // Auto-refresh every 30 seconds
+            setInterval(refreshDashboard, 30000);
+        });
+
+        // Initialize charts
+        function initializeCharts() {
+            const ctx = document.getElementById('responseTimeChart').getContext('2d');
+            responseTimeChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Response Time (ms)',
+                        data: [],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Response Time (ms)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Refresh dashboard data
+        async function refreshDashboard() {
+            try {
+                // Fetch health data
+                const healthResponse = await fetch('/api/health/advanced');
+                const healthData = await healthResponse.json();
+                
+                if (healthData.success) {
+                    updateHealthMetrics(healthData.data);
+                }
+                
+                // Update charts with mock data (replace with real API calls)
+                updateCharts();
+                updateDatasetPerformance();
+                
+            } catch (error) {
+                console.error('Failed to refresh dashboard:', error);
+            }
+        }
+
+        // Update health metrics
+        function updateHealthMetrics(data) {
+            document.getElementById('system-status').textContent = data.status;
+            document.getElementById('system-uptime').textContent = data.uptime.human;
+            document.getElementById('system-memory').textContent = 
+                `${data.memory.used} (${data.memory.percentage}%)`;
+                
+            document.getElementById('avg-response').textContent = data.performance.averageResponseTime;
+            document.getElementById('cache-hit-rate').textContent = data.performance.cacheHitRate;
+            document.getElementById('requests-per-min').textContent = data.performance.requestsPerMinute;
+            document.getElementById('error-rate').textContent = data.performance.errorRate;
+        }
+
+        // Update charts with sample data
+        function updateCharts() {
+            const now = new Date();
+            const timeLabel = now.toLocaleTimeString();
+            
+            // Simulate response time data
+            const responseTime = Math.random() * 3 + 0.5; // 0.5-3.5ms
+            
+            responseTimeChart.data.labels.push(timeLabel);
+            responseTimeChart.data.datasets[0].data.push(responseTime);
+            
+            // Keep only last 20 data points
+            if (responseTimeChart.data.labels.length > 20) {
+                responseTimeChart.data.labels.shift();
+                responseTimeChart.data.datasets[0].data.shift();
+            }
+            
+            responseTimeChart.update('none');
+        }
+
+        // Update dataset performance list
+        function updateDatasetPerformance() {
+            const datasets = [
+                { name: 'forest-fires', avgTime: 1.2, status: 'fast' },
+                { name: 'air-quality-tbilisi', avgTime: 0.8, status: 'fast' },
+                { name: 'protected-areas-mammals', avgTime: 2.1, status: 'medium' },
+                { name: 'water-abstraction', avgTime: 1.5, status: 'fast' },
+                { name: 'timber-by-cutting-purpose', avgTime: 1.8, status: 'fast' },
+                { name: 'geological-phenomena', avgTime: 3.2, status: 'medium' }
+            ];
+            
+            const container = document.getElementById('dataset-performance');
+            container.innerHTML = datasets.map(dataset => `
+                <div class="dataset-item">
+                    <span>${dataset.name}</span>
+                    <div>
+                        <span>${dataset.avgTime}ms</span>
+                        <span class="performance-badge ${dataset.status}">
+                            ${dataset.status.toUpperCase()}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Status class helper
+        function getStatusClass(status) {
+            switch(status.toLowerCase()) {
+                case 'healthy': return 'status-healthy';
+                case 'degraded': return 'status-warning';
+                case 'unhealthy': return 'status-error';
+                default: return '';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -13,4 +13,7 @@ router.get('/', asyncHandler(healthController.healthCheck.bind(healthController)
 // GET /status - Detailed system status
 router.get('/status', asyncHandler(healthController.systemStatus.bind(healthController)));
 
+// GET /advanced - Advanced health check with performance metrics
+router.get('/advanced', asyncHandler(healthController.advancedHealth.bind(healthController)));
+
 export default router;
