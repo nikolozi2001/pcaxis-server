@@ -2295,10 +2295,13 @@ export class DataProcessingService {
         });
       });
       
-      // Add calculated "გადახრა" values (deviation values minus 1)
+      // Add calculated "გადახრა" values (deviation values minus 1, multiplied by 100, formatted to 2 decimal places)
       deviationValues.forEach(deviationValue => {
-        const calculatedValue = deviationValue - 1;
-        row[comboIndex.toString()] = calculatedValue;
+        const calculatedValue = (deviationValue - 1) * 100;
+        // Format to 2 decimal places and convert back to number
+        // const formattedValue = parseFloat(calculatedValue.toFixed(1));
+        const formattedValue = Number(calculatedValue.toFixed(1)); // Same as parseFloat()
+        row[comboIndex.toString()] = formattedValue;
         comboIndex++;
         hasData = true;
       });
