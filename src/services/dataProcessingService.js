@@ -280,10 +280,6 @@ export class DataProcessingService {
     'forest-fires': {
       '0': 2017, '1': 2018, '2': 2019, '3': 2020, 
       '4': 2021, '5': 2022, '6': 2023
-    },
-    'hydro-meteorological-hazards': {
-      '0': 2013, '1': 2014, '2': 2015, '3': 2016, '4': 2017,
-      '5': 2018, '6': 2019, '7': 2020, '8': 2021, '9': 2022, '10': 2023
     }
     // TEMPLATE for new dataset:
     // 'new-dataset': {
@@ -2802,10 +2798,11 @@ export class DataProcessingService {
 
     // Process each year
     validYears.forEach((year, yearIndex) => {
-      const actualYear = this._parseYear(year, yearIndex, yearLabels, 'hydro-meteorological-hazards');
-      actualYears.push(actualYear);
+      // Use the year index directly instead of parsing to actual year
+      const yearValue = parseInt(year);
+      actualYears.push(yearValue);
       
-      const row = { year: actualYear };
+      const row = { year: yearValue };
 
       // Process original hazard-month combinations
       hazardValues.forEach(hazardId => {
