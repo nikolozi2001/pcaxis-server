@@ -48,6 +48,7 @@ A modern Node.js API server for accessing Georgian statistical data from the PXW
 - **Health Monitoring** - Health check and system status endpoints
 - **Network Access** - Accessible from local network (other PCs)
 - **Modern Architecture** - Modular, maintainable code structure
+- **PM2 Production Ready** - Full PM2 process manager configuration for production deployment
 - **Georgian Language Support** - Category names in Georgian
 
 ## 📁 Project Structure
@@ -123,7 +124,65 @@ pcaxis-server/
    npm run dev
    ```
 
-## 🌐 API Endpoints
+## � Production Deployment with PM2
+
+This project is fully configured for production deployment using PM2 (Process Manager 2).
+
+### Quick Start with PM2
+
+1. **Install PM2:**
+   ```bash
+   npm install -g pm2
+   ```
+
+2. **Start in Production:**
+   ```bash
+   npm run pm2:start
+   ```
+
+3. **Check Status:**
+   ```bash
+   npm run pm2:status
+   ```
+
+### Available PM2 Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run pm2:start` | Start in production mode |
+| `npm run pm2:dev` | Start in development mode (with file watching) |
+| `npm run pm2:staging` | Start in staging mode |
+| `npm run pm2:stop` | Stop the application |
+| `npm run pm2:restart` | Restart the application |
+| `npm run pm2:reload` | Reload with 0-downtime |
+| `npm run pm2:logs` | View application logs |
+| `npm run pm2:monit` | Open process monitor |
+| `npm run pm2:status` | Show process status |
+
+### Quick Setup Scripts
+
+**Windows Users:**
+```bash
+# Run the batch file
+start-pm2.bat
+```
+
+**Unix/Linux/Mac Users:**
+```bash
+# Make executable and run
+chmod +x start-pm2.sh
+./start-pm2.sh
+```
+
+### Health Monitoring
+
+PM2 integrates with the built-in health endpoints:
+- Health check: `http://localhost:3000/health`
+- System status: `http://localhost:3000/health/status`
+
+For detailed PM2 configuration and advanced deployment options, see [PM2_DEPLOYMENT.md](PM2_DEPLOYMENT.md).
+
+## �🌐 API Endpoints
 
 ### Base URL
 - **Local:** `http://localhost:3000`

@@ -6,7 +6,14 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+// app.use(cors({
+//   origin: ['https://example.com', 'https://myapp.com'], // allowed domains
+//   methods: ['GET', 'POST', 'PUT', 'DELETE'],           // allowed methods
+//   allowedHeaders: ['Content-Type', 'Authorization']   // allowed headers
+// }));
+
+app.use(cors({ origin: '*' }));
+
 app.use(express.json());
 
 // PXWeb API base URL
