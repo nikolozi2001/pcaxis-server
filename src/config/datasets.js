@@ -59,7 +59,7 @@ export const DATASETS = {
     id: 'forest-area',
     name: 'Forest Area',
     description: 'Forest area coverage and changes over time',
-    path: 'Environment%20Statistics/Forest%20Resources/01_Forest_Area.px',
+    path: 'Environment%20Statistics/Forest%20Resources/Forest_Area.px',
     category: 'environment'
   },
   'forest-production': {
