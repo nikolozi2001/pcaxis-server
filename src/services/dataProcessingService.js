@@ -247,7 +247,8 @@ export class DataProcessingService {
     'protected-areas-categories': '_processProtectedAreasCategoriesSpecial',
     'protected-areas-birds': '_processProtectedAreasBirdsSpecial',
     'timber-by-cutting-purpose': '_processTimberByCuttingPurposeSpecial',
-    'forest-fires': '_processForestFiresSpecial'
+    'forest-fires': '_processForestFiresSpecial',
+    'hydro-meteorological-hazards': '_processHydroMeteorologicalHazardsSpecial'
   };
 
   /**
@@ -264,7 +265,7 @@ export class DataProcessingService {
     'fertilizer-use', 'geological-phenomena', 'final-energy-consumption',
     'primary-energy-supply', 'energy-intensity', 'protected-areas-mammals',
     'protected-areas-categories', 'protected-areas-birds', 'timber-by-cutting-purpose',
-    'atmospheric-precipitation'
+    'atmospheric-precipitation', 'hydro-meteorological-hazards'
   ]);
 
   /**
@@ -279,6 +280,10 @@ export class DataProcessingService {
     'forest-fires': {
       '0': 2017, '1': 2018, '2': 2019, '3': 2020, 
       '4': 2021, '5': 2022, '6': 2023
+    },
+    'hydro-meteorological-hazards': {
+      '0': 2013, '1': 2014, '2': 2015, '3': 2016, '4': 2017,
+      '5': 2018, '6': 2019, '7': 2020, '8': 2021, '9': 2022, '10': 2023
     }
     // TEMPLATE for new dataset:
     // 'new-dataset': {
@@ -601,6 +606,11 @@ export class DataProcessingService {
     // Special handling for atmospheric-precipitation dataset (treat as multi-dimensional with numeric indices)
     if (datasetId === 'atmospheric-precipitation') {
       return this._processAtmosphericPrecipitationSpecial(dataset, years, yearDimId, otherDims, lang);
+    }
+
+    // Special handling for hydro-meteorological-hazards dataset (add totals for each month)
+    if (datasetId === 'hydro-meteorological-hazards') {
+      return this._processHydroMeteorologicalHazardsSpecial(dataset, years, yearDimId, otherDims);
     }
 
     // Default processing for other datasets
@@ -1840,6 +1850,18 @@ export class DataProcessingService {
           // Add corresponding values index
           originalValues.push(originalValues.length.toString());
         }
+
+        // Special handling for hydro-meteorological-hazards dataset to add total field
+        if (datasetId === 'hydro-meteorological-hazards' && v.code === 'Hydrometeorological hazard') {
+          // Add the total field to valueTexts based on language
+          const totalFieldText = lang === 'en' 
+            ? 'Total each month'
+            : 'ჯამი თითოეულ თვეში';
+          
+          valueTexts = [...valueTexts, totalFieldText];
+          // Add corresponding values index
+          originalValues.push(originalValues.length.toString());
+        }
         
         return {
           code: v.code,
@@ -2738,6 +2760,106 @@ export class DataProcessingService {
    */
   _isValidYear(year) {
     return !isNaN(year) && year > 1900 && year < 3000;
+  }
+
+  /**
+   * Special processing for hydro-meteorological-hazards dataset
+   * Adds total for each month calculation (sum of all hazard types except human casualties)
+   */
+  _processHydroMeteorologicalHazardsSpecial(dataset, years, yearDimId, otherDims) {
+    // Filter out empty years first
+    const validYears = years.filter(year => year && String(year).trim() !== '');
+
+    // Get dimension information
+    const hazardDim = otherDims.find(dim => dim.toLowerCase().includes('hazard')) || otherDims[0];
+    const monthDim = otherDims.find(dim => dim.toLowerCase().includes('month')) || otherDims[1];
+    
+    const hazardValues = dataset.Dimension(hazardDim).id;
+    const hazardLabels = this._getCategoryLabels(dataset, hazardDim);
+    const monthValues = dataset.Dimension(monthDim).id;
+    const monthLabels = this._getCategoryLabels(dataset, monthDim);
+    const yearLabels = this._getCategoryLabels(dataset, yearDimId);
+
+    const data = [];
+    const categories = [];
+    const actualYears = [];
+
+    // Create categories for hazard-month combinations including the new total
+    hazardValues.forEach(hazardId => {
+      monthValues.forEach(monthId => {
+        categories.push(`${hazardId} - ${monthId}`);
+      });
+    });
+
+    // Add new total category for each month (hazard index 6 for "ჯამი თითოეულ თვეში")
+    const totalHazardIndex = '6';
+    monthValues.forEach(monthId => {
+      // Skip adding total for index 12 (human casualties)
+      if (monthId !== '12') {
+        categories.push(`${totalHazardIndex} - ${monthId}`);
+      }
+    });
+
+    // Process each year
+    validYears.forEach((year, yearIndex) => {
+      const actualYear = this._parseYear(year, yearIndex, yearLabels, 'hydro-meteorological-hazards');
+      actualYears.push(actualYear);
+      
+      const row = { year: actualYear };
+
+      // Process original hazard-month combinations
+      hazardValues.forEach(hazardId => {
+        monthValues.forEach(monthId => {
+          const queryObj = { [yearDimId]: year, [hazardDim]: hazardId, [monthDim]: monthId };
+          const cell = dataset.Data(queryObj);
+          const value = cell ? Number(cell.value) : 0;
+          row[`${hazardId} - ${monthId}`] = value;
+        });
+      });
+
+      // Calculate totals for each month (sum of hazards 0-5, excluding 12=human casualties)
+      monthValues.forEach(monthId => {
+        if (monthId !== '12') { // Skip human casualties month
+          let monthTotal = 0;
+          // Sum hazards 0-5 (წყალდიდობა-წყალმოვარდნა, ქარიშხალი, სეტყვა, დიდთოვლობა, შტორმი, ზვავი)
+          for (let hazardIndex = 0; hazardIndex <= 5; hazardIndex++) {
+            const hazardId = hazardIndex.toString();
+            const queryObj = { [yearDimId]: year, [hazardDim]: hazardId, [monthDim]: monthId };
+            const cell = dataset.Data(queryObj);
+            const value = cell ? Number(cell.value) : 0;
+            monthTotal += value;
+          }
+          row[`${totalHazardIndex} - ${monthId}`] = monthTotal;
+        }
+      });
+
+      data.push(row);
+    });
+
+    return {
+      title: dataset.label || 'სტიქიური ჰიდრომეტეოროლოგიური მოვლენების შემთხვევათა რაოდენობა (ერთეული)',
+      dimensions: [yearDimId, hazardDim, monthDim],
+      categories: categories,
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(actualYears),
+        dimensionCount: otherDims.length + 1,
+        seriesCount: categories.length,
+        yearMapping: actualYears.map((actualYear, index) => ({ 
+          index: index.toString(), 
+          value: actualYear 
+        })),
+        hazardLabels: hazardLabels,
+        monthLabels: monthLabels,
+        // Add metadata for the new total hazard type
+        enhancedHazardLabels: {
+          ...hazardLabels,
+          '6': 'ჯამი თითოეულ თვეში' // Georgian for "Total each month"
+        }
+      }
+    };
   }
 
   /**
