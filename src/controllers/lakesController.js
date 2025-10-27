@@ -13,29 +13,71 @@ class LakesController {
   constructor() {
     this.lakesDataGeo = null;
     this.lakesDataEng = null;
+    this.lastLoadTime = null;
+    this.cacheTimeout = 5 * 60 * 1000; // 5 minutes cache timeout
+    this.csvPathGeo = path.resolve(__dirname, '../../data/Lakes_and_Reservoirs_GEO.csv');
+    this.csvPathEng = path.resolve(__dirname, '../../data/Lakes_and_Reservoirs_ENG.csv');
+    
+    // Load initial data
     this.loadLakesData();
+  }
+
+  /**
+   * Check if data needs to be reloaded (cache invalidation)
+   */
+  async shouldReloadData() {
+    if (!this.lastLoadTime) return true;
+    
+    // Check if cache timeout has passed
+    if (Date.now() - this.lastLoadTime > this.cacheTimeout) return true;
+    
+    try {
+      // Check if CSV files have been modified since last load
+      const [statsGeo, statsEng] = await Promise.all([
+        fs.stat(this.csvPathGeo),
+        fs.stat(this.csvPathEng)
+      ]);
+      
+      const latestFileTime = Math.max(
+        statsGeo.mtime.getTime(),
+        statsEng.mtime.getTime()
+      );
+      
+      return latestFileTime > this.lastLoadTime;
+    } catch (error) {
+      console.error('Error checking file stats:', error);
+      return false;
+    }
   }
 
   /**
    * Load lakes data from both Georgian and English CSV files
    */
-  async loadLakesData() {
+  async loadLakesData(force = false) {
     try {
+      // Check if we need to reload data
+      if (!force && !(await this.shouldReloadData())) {
+        return;
+      }
+
+      console.log('🔄 Reloading lakes data from CSV files...');
+      
       // Load Georgian data
-      const csvPathGeo = path.resolve(__dirname, '../../data/Lakes_and_Reservoirs_GEO.csv');
-      const csvContentGeo = await fs.readFile(csvPathGeo, 'utf-8');
+      const csvContentGeo = await fs.readFile(this.csvPathGeo, 'utf-8');
       this.lakesDataGeo = this.parseCSVData(csvContentGeo);
       
       // Load English data
-      const csvPathEng = path.resolve(__dirname, '../../data/Lakes_and_Reservoirs_ENG.csv');
-      const csvContentEng = await fs.readFile(csvPathEng, 'utf-8');
+      const csvContentEng = await fs.readFile(this.csvPathEng, 'utf-8');
       this.lakesDataEng = this.parseCSVData(csvContentEng);
 
-      console.log(`Loaded ${this.lakesDataGeo.length} lakes (Georgian) and ${this.lakesDataEng.length} lakes (English) from CSV files`);
+      this.lastLoadTime = Date.now();
+      console.log(`✅ Loaded ${this.lakesDataGeo.length} lakes (Georgian) and ${this.lakesDataEng.length} lakes (English) from CSV files`);
     } catch (error) {
-      console.error('Error loading lakes data:', error);
-      this.lakesDataGeo = [];
-      this.lakesDataEng = [];
+      console.error('❌ Error loading lakes data:', error);
+      if (!this.lakesDataGeo || !this.lakesDataEng) {
+        this.lakesDataGeo = [];
+        this.lakesDataEng = [];
+      }
     }
   }
 
@@ -92,8 +134,11 @@ class LakesController {
 
   /**
    * Get lakes data based on language preference
+   * Automatically checks for data updates before returning
    */
-  getLakesData(language = 'geo') {
+  async getLakesData(language = 'geo') {
+    await this.loadLakesData();
+    
     if (language === 'eng' || language === 'en') {
       return this.lakesDataEng || [];
     }
@@ -131,7 +176,7 @@ class LakesController {
   async getAllLakes(req, res) {
     const { limit, offset, type, sortBy, order, lang } = req.query;
     
-    let lakes = [...this.getLakesData(lang)];
+    let lakes = [...await this.getLakesData(lang)];
     
     // Filter by type (lake or reservoir)
     if (type) {
@@ -201,7 +246,7 @@ class LakesController {
     const { lang } = req.query;
     const lakeId = parseInt(id);
     
-    const lakesData = this.getLakesData(lang);
+    const lakesData = await this.getLakesData(lang);
     const lake = lakesData.find(l => l.id === lakeId);
     
     if (!lake) {
@@ -228,7 +273,7 @@ class LakesController {
    */
   async getLakesStats(req, res) {
     const { lang } = req.query;
-    const lakesData = this.getLakesData(lang);
+    const lakesData = await this.getLakesData(lang);
     const totalLakes = lakesData.length;
     
     // Calculate statistics
@@ -301,7 +346,7 @@ class LakesController {
       });
     }
     
-    const lakesData = this.getLakesData(lang);
+    const lakesData = await this.getLakesData(lang);
     const searchTerm = q.toLowerCase();
     const searchField = field || 'all';
     
@@ -338,7 +383,7 @@ class LakesController {
     const { type } = req.params;
     const { lang } = req.query;
     
-    const lakesData = this.getLakesData(lang);
+    const lakesData = await this.getLakesData(lang);
     let lakes = [];
     
     if (type === 'lakes') {
@@ -388,6 +433,9 @@ class LakesController {
   async getLakesBiLingual(req, res) {
     const { id } = req.params;
     
+    // Ensure data is loaded
+    await this.loadLakesData();
+    
     if (id) {
       // Get specific lake in both languages
       const lakeId = parseInt(id);
@@ -423,6 +471,76 @@ class LakesController {
             languages: ['georgian', 'english']
           }
         }
+      });
+    }
+  }
+
+  /**
+   * Manually refresh lakes data (force reload)
+   */
+  async refreshData(req, res) {
+    try {
+      await this.loadLakesData(true); // Force reload
+      
+      res.json({
+        success: true,
+        message: 'Lakes data refreshed successfully',
+        data: {
+          georgianLakes: this.lakesDataGeo.length,
+          englishLakes: this.lakesDataEng.length,
+          lastUpdated: new Date(this.lastLoadTime).toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('Error refreshing lakes data:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to refresh data',
+        message: error.message
+      });
+    }
+  }
+
+  /**
+   * Get data loading status and cache info
+   */
+  async getDataStatus(req, res) {
+    try {
+      const [statsGeo, statsEng] = await Promise.all([
+        fs.stat(this.csvPathGeo).catch(() => null),
+        fs.stat(this.csvPathEng).catch(() => null)
+      ]);
+
+      res.json({
+        success: true,
+        data: {
+          status: {
+            dataLoaded: !!(this.lakesDataGeo && this.lakesDataEng),
+            georgianLakes: this.lakesDataGeo?.length || 0,
+            englishLakes: this.lakesDataEng?.length || 0,
+            lastLoadTime: this.lastLoadTime ? new Date(this.lastLoadTime).toISOString() : null,
+            cacheTimeout: this.cacheTimeout
+          },
+          files: {
+            georgianFile: {
+              exists: !!statsGeo,
+              lastModified: statsGeo ? statsGeo.mtime.toISOString() : null,
+              size: statsGeo ? statsGeo.size : null
+            },
+            englishFile: {
+              exists: !!statsEng,
+              lastModified: statsEng ? statsEng.mtime.toISOString() : null,
+              size: statsEng ? statsEng.size : null
+            }
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error getting data status:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get data status',
+        message: error.message
       });
     }
   }

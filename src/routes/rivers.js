@@ -17,6 +17,12 @@ router.get('/stats', asyncHandler(riversController.getRiversStats.bind(riversCon
 // GET /api/rivers/search - Search rivers by name, location, etc.
 router.get('/search', asyncHandler(riversController.searchRivers.bind(riversController)));
 
+// GET /api/rivers/refresh - Manually refresh rivers data
+router.get('/refresh', asyncHandler(riversController.refreshData.bind(riversController)));
+
+// GET /api/rivers/status - Get data loading status and cache info
+router.get('/status', asyncHandler(riversController.getDataStatus.bind(riversController)));
+
 // GET /api/rivers/bilingual - Get all rivers in both languages
 router.get('/bilingual', asyncHandler(riversController.getRiversBiLingual.bind(riversController)));
 

@@ -17,6 +17,12 @@ router.get('/stats', asyncHandler(lakesController.getLakesStats.bind(lakesContro
 // GET /api/lakes/search - Search lakes by name, location, etc.
 router.get('/search', asyncHandler(lakesController.searchLakes.bind(lakesController)));
 
+// GET /api/lakes/refresh - Manually refresh lakes data
+router.get('/refresh', asyncHandler(lakesController.refreshData.bind(lakesController)));
+
+// GET /api/lakes/status - Get data loading status and cache info
+router.get('/status', asyncHandler(lakesController.getDataStatus.bind(lakesController)));
+
 // GET /api/lakes/bilingual - Get all lakes in both languages
 router.get('/bilingual', asyncHandler(lakesController.getLakesBiLingual.bind(lakesController)));
 
