@@ -5,6 +5,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import XLSX from 'xlsx';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,11 +16,39 @@ class LakesController {
     this.lakesDataEng = null;
     this.lastLoadTime = null;
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes cache timeout
+    // Check for Excel files first, fallback to CSV
+    this.dataPathGeo = path.resolve(__dirname, '../../data/Lakes_and_Reservoirs_GEO.xlsx');
+    this.dataPathEng = path.resolve(__dirname, '../../data/Lakes_and_Reservoirs_ENG.xlsx');
     this.csvPathGeo = path.resolve(__dirname, '../../data/Lakes_and_Reservoirs_GEO.csv');
     this.csvPathEng = path.resolve(__dirname, '../../data/Lakes_and_Reservoirs_ENG.csv');
     
     // Load initial data
     this.loadLakesData();
+  }
+
+  /**
+   * Determine which file format to use (Excel preferred, CSV fallback)
+   */
+  async getFilePaths() {
+    try {
+      // Check if Excel files exist
+      await Promise.all([
+        fs.stat(this.dataPathGeo),
+        fs.stat(this.dataPathEng)
+      ]);
+      return {
+        geoPath: this.dataPathGeo,
+        engPath: this.dataPathEng,
+        isExcel: true
+      };
+    } catch {
+      // Fallback to CSV files
+      return {
+        geoPath: this.csvPathGeo,
+        engPath: this.csvPathEng,
+        isExcel: false
+      };
+    }
   }
 
   /**
@@ -32,10 +61,11 @@ class LakesController {
     if (Date.now() - this.lastLoadTime > this.cacheTimeout) return true;
     
     try {
-      // Check if CSV files have been modified since last load
+      const { geoPath, engPath } = await this.getFilePaths();
+      // Check if files have been modified since last load
       const [statsGeo, statsEng] = await Promise.all([
-        fs.stat(this.csvPathGeo),
-        fs.stat(this.csvPathEng)
+        fs.stat(geoPath),
+        fs.stat(engPath)
       ]);
       
       const latestFileTime = Math.max(
@@ -60,24 +90,68 @@ class LakesController {
         return;
       }
 
-      console.log('🔄 Reloading lakes data from CSV files...');
+      const { geoPath, engPath, isExcel } = await this.getFilePaths();
+      const fileType = isExcel ? 'Excel' : 'CSV';
       
-      // Load Georgian data
-      const csvContentGeo = await fs.readFile(this.csvPathGeo, 'utf-8');
-      this.lakesDataGeo = this.parseCSVData(csvContentGeo);
+      console.log(`🔄 Reloading lakes data from ${fileType} files...`);
       
-      // Load English data
-      const csvContentEng = await fs.readFile(this.csvPathEng, 'utf-8');
-      this.lakesDataEng = this.parseCSVData(csvContentEng);
+      if (isExcel) {
+        // Load data from Excel files
+        this.lakesDataGeo = this.parseExcelData(geoPath);
+        this.lakesDataEng = this.parseExcelData(engPath);
+      } else {
+        // Load data from CSV files
+        const csvContentGeo = await fs.readFile(geoPath, 'utf-8');
+        this.lakesDataGeo = this.parseCSVData(csvContentGeo);
+        
+        const csvContentEng = await fs.readFile(engPath, 'utf-8');
+        this.lakesDataEng = this.parseCSVData(csvContentEng);
+      }
 
       this.lastLoadTime = Date.now();
-      console.log(`✅ Loaded ${this.lakesDataGeo.length} lakes (Georgian) and ${this.lakesDataEng.length} lakes (English) from CSV files`);
+      console.log(`✅ Loaded ${this.lakesDataGeo.length} lakes (Georgian) and ${this.lakesDataEng.length} lakes (English) from ${fileType} files`);
     } catch (error) {
       console.error('❌ Error loading lakes data:', error);
       if (!this.lakesDataGeo || !this.lakesDataEng) {
         this.lakesDataGeo = [];
         this.lakesDataEng = [];
       }
+    }
+  }
+
+  /**
+   * Parse Excel data into structured format
+   */
+  parseExcelData(filePath) {
+    try {
+      const workbook = XLSX.readFile(filePath);
+      const sheetName = workbook.SheetNames[0]; // Use the first sheet
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet);
+      
+      return data.map((row, index) => {
+        const lake = { ...row };
+        
+        // Add numeric ID for API consistency
+        lake.id = index + 1;
+        
+        // Ensure numeric fields are properly parsed
+        if (lake.area) lake.area = parseFloat(lake.area) || 0;
+        if (lake.depth) lake.depth = parseFloat(lake.depth) || 0;
+        if (lake.volume) lake.volume = parseFloat(lake.volume) || 0;
+        if (lake.elevation) lake.elevation = parseFloat(lake.elevation) || 0;
+        
+        // Ensure string fields are strings
+        if (lake.name) lake.name = String(lake.name);
+        if (lake.location) lake.location = String(lake.location);
+        if (lake.type) lake.type = String(lake.type);
+        if (lake.mainUse) lake.mainUse = String(lake.mainUse);
+        
+        return lake;
+      });
+    } catch (error) {
+      console.error(`Error parsing Excel file ${filePath}:`, error);
+      return [];
     }
   }
 
@@ -506,9 +580,10 @@ class LakesController {
    */
   async getDataStatus(req, res) {
     try {
+      const { geoPath, engPath, isExcel } = await this.getFilePaths();
       const [statsGeo, statsEng] = await Promise.all([
-        fs.stat(this.csvPathGeo).catch(() => null),
-        fs.stat(this.csvPathEng).catch(() => null)
+        fs.stat(geoPath).catch(() => null),
+        fs.stat(engPath).catch(() => null)
       ]);
 
       res.json({
@@ -522,12 +597,15 @@ class LakesController {
             cacheTimeout: this.cacheTimeout
           },
           files: {
+            fileType: isExcel ? 'Excel (.xlsx)' : 'CSV (.csv)',
             georgianFile: {
+              path: geoPath,
               exists: !!statsGeo,
               lastModified: statsGeo ? statsGeo.mtime.toISOString() : null,
               size: statsGeo ? statsGeo.size : null
             },
             englishFile: {
+              path: engPath,
               exists: !!statsEng,
               lastModified: statsEng ? statsEng.mtime.toISOString() : null,
               size: statsEng ? statsEng.size : null

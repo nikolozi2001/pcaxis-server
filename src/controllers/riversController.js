@@ -5,6 +5,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import XLSX from 'xlsx';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,8 +16,8 @@ class RiversController {
     this.riversDataEng = null;
     this.lastLoadTime = null;
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes cache timeout
-    this.csvPathGeo = path.resolve(__dirname, '../../data/Rivers_GEO.csv');
-    this.csvPathEng = path.resolve(__dirname, '../../data/Rivers_ENG.csv');
+    this.xlsxPathGeo = path.resolve(__dirname, '../../data/Rivers_GEO.xlsx');
+    this.xlsxPathEng = path.resolve(__dirname, '../../data/Rivers_ENG.xlsx');
     
     // Load initial data
     this.loadRiversData();
@@ -32,10 +33,10 @@ class RiversController {
     if (Date.now() - this.lastLoadTime > this.cacheTimeout) return true;
     
     try {
-      // Check if CSV files have been modified since last load
+      // Check if Excel files have been modified since last load
       const [statsGeo, statsEng] = await Promise.all([
-        fs.stat(this.csvPathGeo),
-        fs.stat(this.csvPathEng)
+        fs.stat(this.xlsxPathGeo),
+        fs.stat(this.xlsxPathEng)
       ]);
       
       const latestFileTime = Math.max(
@@ -60,18 +61,16 @@ class RiversController {
         return;
       }
 
-      console.log('🔄 Reloading rivers data from CSV files...');
+      console.log('🔄 Reloading rivers data from Excel files...');
       
       // Load Georgian data
-      const csvContentGeo = await fs.readFile(this.csvPathGeo, 'utf-8');
-      this.riversDataGeo = this.parseCSVData(csvContentGeo);
+      this.riversDataGeo = this.parseExcelData(this.xlsxPathGeo);
       
       // Load English data
-      const csvContentEng = await fs.readFile(this.csvPathEng, 'utf-8');
-      this.riversDataEng = this.parseCSVData(csvContentEng);
+      this.riversDataEng = this.parseExcelData(this.xlsxPathEng);
 
       this.lastLoadTime = Date.now();
-      console.log(`✅ Loaded ${this.riversDataGeo.length} rivers (Georgian) and ${this.riversDataEng.length} rivers (English) from CSV files`);
+      console.log(`✅ Loaded ${this.riversDataGeo.length} rivers (Georgian) and ${this.riversDataEng.length} rivers (English) from Excel files`);
     } catch (error) {
       console.error('❌ Error loading rivers data:', error);
       if (!this.riversDataGeo || !this.riversDataEng) {
@@ -82,42 +81,37 @@ class RiversController {
   }
 
   /**
-   * Parse CSV data into structured format
+   * Parse Excel data into structured format
    */
-  parseCSVData(csvContent) {
-    const lines = csvContent.trim().split('\n');
-    const headers = lines[0].split(',').map(header => header.trim().replace(/\r/g, ''));
-    
-    return lines.slice(1).map((line, index) => {
-      const values = this.parseCSVLine(line);
-      const river = {};
+  parseExcelData(filePath) {
+    try {
+      const workbook = XLSX.readFile(filePath);
+      const sheetName = workbook.SheetNames[0]; // Use the first sheet
+      const worksheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(worksheet);
       
-      headers.forEach((header, i) => {
-        river[header] = values[i] || '';
+      return data.map((row, index) => {
+        const river = { ...row };
+        
+        // Add numeric ID for API consistency
+        river.id = index + 1;
+        
+        // Ensure numeric fields are properly parsed
+        if (river.length) river.length = parseFloat(river.length) || 0;
+        if (river.basinArea) river.basinArea = parseFloat(river.basinArea) || 0;
+        
+        // Ensure string fields are strings
+        if (river.name) river.name = String(river.name);
+        if (river.location) river.location = String(river.location);
+        if (river.seaBasin) river.seaBasin = String(river.seaBasin);
+        if (river.mainUse) river.mainUse = String(river.mainUse);
+        
+        return river;
       });
-      
-      // Add numeric ID for API consistency
-      river.id = index + 1;
-      
-      // Parse numeric fields - handle both column name formats
-      const lengthField = river.length || river.length_km;
-      const basinField = river.basinArea || river.basinArea_sqkm;
-      
-      if (lengthField) river.length = parseFloat(lengthField) || 0;
-      if (basinField) river.basinArea = parseFloat(basinField) || 0;
-      
-      // Standardize field names
-      if (river.length_km) {
-        river.length = river.length;
-        delete river.length_km;
-      }
-      if (river.basinArea_sqkm) {
-        river.basinArea = river.basinArea;
-        delete river.basinArea_sqkm;
-      }
-      
-      return river;
-    });
+    } catch (error) {
+      console.error(`Error parsing Excel file ${filePath}:`, error);
+      return [];
+    }
   }
 
   /**
@@ -133,30 +127,7 @@ class RiversController {
     return this.riversDataGeo || [];
   }
 
-  /**
-   * Parse CSV line handling quoted values
-   */
-  parseCSVLine(line) {
-    const result = [];
-    let current = '';
-    let inQuotes = false;
-    
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        result.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    
-    result.push(current.trim());
-    return result;
-  }
+
 
   /**
    * Get all rivers
@@ -465,8 +436,8 @@ class RiversController {
   async getDataStatus(req, res) {
     try {
       const [statsGeo, statsEng] = await Promise.all([
-        fs.stat(this.csvPathGeo).catch(() => null),
-        fs.stat(this.csvPathEng).catch(() => null)
+        fs.stat(this.xlsxPathGeo).catch(() => null),
+        fs.stat(this.xlsxPathEng).catch(() => null)
       ]);
 
       res.json({
@@ -480,12 +451,15 @@ class RiversController {
             cacheTimeout: this.cacheTimeout
           },
           files: {
+            fileType: 'Excel (.xlsx)',
             georgianFile: {
+              path: this.xlsxPathGeo,
               exists: !!statsGeo,
               lastModified: statsGeo ? statsGeo.mtime.toISOString() : null,
               size: statsGeo ? statsGeo.size : null
             },
             englishFile: {
+              path: this.xlsxPathEng,
               exists: !!statsEng,
               lastModified: statsEng ? statsEng.mtime.toISOString() : null,
               size: statsEng ? statsEng.size : null
