@@ -1888,12 +1888,11 @@ export class DataProcessingService {
     // Create a row for each valid year with actual years
     validYears.forEach((year, yearIndex) => {
       // Geological phenomena years mapping: 0->1995, 1->1996, ..., 28->2023
-      const actualYear = 1995 + parseInt(year);
+      const actualYear = 1995 + yearIndex; // Fix: use yearIndex instead of parseInt(year)
       const row = { year: actualYear }; // Use actual year instead of numeric index
-      let hasData = false;
 
-      // For each geological phenomenon type, get the data
-      phenomenaValues.forEach((phenomenaId) => {
+      // For each geological phenomenon type, get the data using numeric indices
+      phenomenaValues.forEach((phenomenaId, phenomenaIndex) => {
         const queryObj = { 
           [yearDimId]: year, 
           [phenomenaDim]: phenomenaId
@@ -1901,33 +1900,33 @@ export class DataProcessingService {
         const cell = dataset.Data(queryObj);
         const value = cell ? Number(cell.value) : null;
         
-        // Use the phenomenon label as the key
-        const phenomenaLabel = phenomenaLabels[phenomenaId] || phenomenaId;
-        row[phenomenaLabel] = value;
-        
-        if (value !== null && value !== undefined) {
-          hasData = true;
-        }
+        // Use numeric indices for categories to match other special processors
+        row[phenomenaIndex.toString()] = value;
       });
 
-      // Only include years that have at least some non-null data
-      if (hasData) {
-        data.push(row);
-      }
+      data.push(row);
     });
 
-    // Create series information for the chart
-    const series = phenomenaValues.map(value => ({
-      key: phenomenaLabels[value] || value,
-      name: phenomenaLabels[value] || value,
-      dataKey: phenomenaLabels[value] || value
-    }));
+    // Calculate actual years for metadata
+    const actualYears = validYears.map((year, yearIndex) => 1995 + yearIndex);
 
     return {
-      data,
-      series,
-      xAxisKey: 'year',
-      title: dataset.title || 'Geological Phenomena Data'
+      title: dataset.label || 'გეოლოგიური მოვლენები',
+      dimensions: [yearDimId, phenomenaDim],
+      categories: phenomenaValues.map((phenId, index) => index.toString()), // Use numeric indices
+      data: data,
+      metadata: {
+        totalRecords: data.length,
+        hasCategories: true,
+        yearRange: this._getYearRange(actualYears), // Use actual years for range
+        dimensionCount: otherDims.length + 1,
+        seriesCount: phenomenaValues.length,
+        yearMapping: actualYears.map((actualYear, index) => ({ index: index.toString(), value: actualYear })), // Provide year mapping
+        categoryMapping: phenomenaValues.map((phenId, index) => ({
+          index: index.toString(),
+          label: phenomenaLabels[phenId] || phenId
+        })) // Provide category mapping
+      }
     };
   }
 
