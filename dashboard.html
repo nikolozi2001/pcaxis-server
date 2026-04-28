@@ -50,8 +50,9 @@
       padding: .3rem .75rem; border-radius: 20px;
       transition: background .3s;
     }
-    #srv-badge.ok  { background: #14532d; color: #bbf7d0; }
-    #srv-badge.err { background: #7f1d1d; color: #fecaca; }
+    #srv-badge.ok      { background: #14532d; color: #bbf7d0; }
+    #srv-badge.err     { background: #7f1d1d; color: #fecaca; }
+    #srv-badge.warn    { background: #78350f; color: #fde68a; }
     #srv-badge.loading { background: #1e3a5f; color: #bae6fd; }
 
     /* ── Tabs ── */
@@ -488,7 +489,8 @@ async function loadHealth() {
   try {
     const r = await fetch(`${API}/api/health/advanced`);
     const j = await r.json();
-    if (!j.success) throw new Error();
+    // treat healthy + degraded as success; only throw on missing data or network failure
+    if (!j.data) throw new Error();
     const d = j.data;
     document.getElementById('s-uptime').textContent    = d.uptime.human;
     document.getElementById('s-mem').textContent       = d.memory.used;
@@ -498,7 +500,11 @@ async function loadHealth() {
     setSvc('svc-server', 'ok', d.uptime.human + ' uptime');
     setSvc('svc-node',   'ok', d.system.nodeVersion);
     setSvc('svc-env',    'ok', d.system.environment);
-    setBadge('ok', '● Connected');
+    if (d.status === 'degraded') {
+      setBadge('warn', '⚠ Degraded' + (d.warnings?.length ? ': ' + d.warnings.join(', ') : ''));
+    } else {
+      setBadge('ok', '● Connected');
+    }
   } catch {
     setBadge('err', '✕ Offline');
     setSvc('svc-server', 'err', 'Unreachable');

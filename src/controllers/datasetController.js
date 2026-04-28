@@ -66,7 +66,12 @@ export class DatasetController {
     try {
       const { id } = req.params;
       const { lang = 'ka' } = req.query; // Default to Georgian, allow English with ?lang=en
-      
+
+      const safeId = id?.replace(/[^a-z0-9\-_]/gi, '');
+      if (!safeId || safeId !== id) {
+        return res.status(400).json({ success: false, error: 'Invalid dataset ID' });
+      }
+
       if (!DATASETS[id]) {
         return res.status(404).json({
           success: false,
@@ -112,7 +117,12 @@ export class DatasetController {
     try {
       const { id } = req.params;
       const { lang = 'ka' } = req.query; // Default to Georgian, allow English with ?lang=en
-      
+
+      const safeId = id?.replace(/[^a-z0-9\-_]/gi, '');
+      if (!safeId || safeId !== id) {
+        return res.status(400).json({ success: false, error: 'Invalid dataset ID' });
+      }
+
       if (!DATASETS[id]) {
         return res.status(404).json({
           success: false,
@@ -155,7 +165,12 @@ export class DatasetController {
   async getJsonStat(req, res) {
     try {
       const { id } = req.params;
-      
+
+      const safeId = id?.replace(/[^a-z0-9\-_]/gi, '');
+      if (!safeId || safeId !== id) {
+        return res.status(400).json({ success: false, error: 'Invalid dataset ID' });
+      }
+
       if (!DATASETS[id]) {
         return res.status(404).json({
           success: false,

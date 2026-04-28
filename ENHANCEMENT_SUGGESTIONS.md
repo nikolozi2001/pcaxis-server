@@ -14,6 +14,8 @@
 | 6 | **Health path fixed** | Correct path is `/api/health`, `/api/health/status`, `/api/health/advanced` |
 | 7 | **README updated** | Reflects all current features and correct endpoint paths |
 | 8 | **`errorRecoveryService.js` deleted** | Was dead code, API is stable |
+| 9 | **`performanceMonitor.js` activated** | Registered in `app.js`; `healthController` uses `getSummary()`; dashboard shows real metrics |
+| 10 | **Input Sanitization** | `getMetadata`, `getData`, `getJsonStat` validate ID with `/[^a-z0-9\-_]/gi` before hitting PXWeb |
 
 ---
 
@@ -113,15 +115,8 @@ res.set('Cache-Control', 'public, max-age=3600'); // 1 საათი
 
 ## 🟡 MEDIUM — ღირს (3-5 სთ)
 
-### 6. Input Sanitization
-`datasetController.js`-ში dataset ID validation არ არის. მავნე ID-ი PXWeb-ს გაეგზავნება:
-```javascript
-// datasetController.js - getMetadata/getData-ს დასაწყისში
-const safeId = req.params.id?.replace(/[^a-z0-9\-_]/gi, '');
-if (!safeId || safeId !== req.params.id) {
-  return res.status(400).json({ success: false, error: 'Invalid dataset ID' });
-}
-```
+### ~~6. Input Sanitization~~ ✅ DONE
+`getMetadata`, `getData`, `getJsonStat` — სამივეს დასაწყისში validation დამატებულია.
 
 ---
 
@@ -204,14 +199,14 @@ describe('GET /api/datasets', () => {
 
 ```
 Quick Wins (1-2h each):
-  [ ] performanceMonitor.js ჩართვა   ← ყველაზე ადვილი, მაქსიმალური სარგებელი
+  [x] performanceMonitor.js ჩართვა
   [ ] compression middleware
   [ ] rate limiting
   [ ] pagination (/api/datasets)
   [ ] Cache-Control headers
 
 Medium (3-5h):
-  [ ] input sanitization
+  [x] input sanitization
   [ ] getGenderStructure endpoint
   [ ] groupedBySubcategory in response
 
