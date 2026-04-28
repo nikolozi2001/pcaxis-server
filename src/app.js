@@ -3,6 +3,7 @@
  */
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import { config } from './config/index.js';
 import routes from './routes/index.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
@@ -20,6 +21,7 @@ export function createApp() {
   app.set('trust proxy', 1);
 
   // Middleware
+  app.use(compression());
   app.use(requestLogger);
   app.use(performanceMonitor.middleware());
   app.use(cors(config.cors));

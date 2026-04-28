@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:pc-axis.geostat.ge)"
+      "WebFetch(domain:pc-axis.geostat.ge)",
+      "Bash(npm install *)"
     ]
   }
 }
