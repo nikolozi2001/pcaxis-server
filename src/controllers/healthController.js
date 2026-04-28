@@ -3,6 +3,7 @@
  * Handles health check and system status endpoints
  */
 import performanceMonitor from '../middleware/performanceMonitor.js';
+import redisService from '../services/redisService.js';
 
 export class HealthController {
   /**
@@ -149,6 +150,7 @@ export class HealthController {
         services: {
           dataProcessing: { status: 'healthy' },
           pxwebApi: { status: 'healthy' },
+          redis: { connected: redisService.isConnected(), status: redisService.isConnected() ? 'healthy' : 'unavailable' }
         },
         
         // System resources
@@ -184,6 +186,20 @@ export class HealthController {
         error: error.message,
         timestamp: new Date().toISOString()
       });
+    }
+  }
+
+  async clearCache(req, res) {
+    try {
+      const deleted = await redisService.flushByPattern('*');
+      res.json({
+        success: true,
+        message: `Cache cleared`,
+        keysDeleted: deleted,
+        redisConnected: redisService.isConnected()
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
     }
   }
 }

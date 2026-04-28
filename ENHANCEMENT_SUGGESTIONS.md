@@ -19,6 +19,7 @@
 | 11 | **compression middleware** | gzip enabled via `compression` package; response-ები ~70% პატარა |
 | 12 | **`getGenderStructure` endpoint** | `GET /api/navigation/gender` — subcategory matching-ით, `getEnvironmentStructure`-ის ანალოგი |
 | 13 | **Subcategory grouping** | `groupedBySubcategory` დამატებულია `/api/datasets` response-ში |
+| 14 | **Redis Caching** | `getMetadata`/`getData` 1სთ TTL-ით; `POST /api/health/cache/clear`; dashboard-ზე Redis სტატუსი + Clear Cache ღილაკი |
 
 ---
 
@@ -93,17 +94,8 @@ res.set('Cache-Control', 'public, max-age=3600'); // 1 საათი
 
 ## 🟢 FUTURE — სამომავლო
 
-### 9. Redis Caching
-PXWeb-ის მოთხოვნა ~190ms სჭირდება. Redis-ით პირველი request შემდეგ cached იქნება:
-```bash
-npm install redis
-```
-```javascript
-const cached = await redis.get(`dataset:${id}:${lang}`);
-if (cached) return res.json(JSON.parse(cached));
-// ... fetch, then:
-await redis.setex(`dataset:${id}:${lang}`, 3600, JSON.stringify(result));
-```
+### ~~9. Redis Caching~~ ✅ DONE
+`redisService.js` — graceful fallback თუ Redis არ არის; `getMetadata`/`getData` ქეშირება 1სთ TTL-ით; dashboard-ზე Clear Cache ღილაკი.
 
 ---
 
@@ -153,7 +145,7 @@ Medium (3-5h):
   [x] groupedBySubcategory in response
 
 Future:
-  [ ] Redis caching
+  [x] Redis caching
   [ ] Docker
   [ ] Automated tests
 

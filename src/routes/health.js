@@ -16,4 +16,7 @@ router.get('/status', asyncHandler(healthController.systemStatus.bind(healthCont
 // GET /advanced - Advanced health check with performance metrics
 router.get('/advanced', asyncHandler(healthController.advancedHealth.bind(healthController)));
 
+// POST /api/health/cache/clear - Clear Redis cache
+router.post('/cache/clear', asyncHandler(healthController.clearCache.bind(healthController)));
+
 export default router;

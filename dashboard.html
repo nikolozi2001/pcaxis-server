@@ -405,6 +405,15 @@
       <div class="svc"><div class="svc-dot" id="svc-pxweb"></div><div><div class="svc-name">PXWeb API</div><div class="svc-detail" id="svc-pxweb-d">geostat.ge</div></div></div>
       <div class="svc"><div class="svc-dot" id="svc-node"></div><div><div class="svc-name">Node.js</div><div class="svc-detail" id="svc-node-d">–</div></div></div>
       <div class="svc"><div class="svc-dot" id="svc-env"></div><div><div class="svc-name">Environment</div><div class="svc-detail" id="svc-env-d">–</div></div></div>
+      <div class="svc"><div class="svc-dot" id="svc-redis"></div><div><div class="svc-name">Redis Cache</div><div class="svc-detail" id="svc-redis-d">–</div></div></div>
+    </div>
+
+    <div class="section-title" style="margin-top:1.5rem">Cache Management</div>
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+      <button id="btn-clear-cache" onclick="clearCache()" style="background:#7f1d1d;color:#fecaca;border:none;padding:.5rem 1.25rem;border-radius:.5rem;cursor:pointer;font-size:.875rem;font-weight:600">
+        🗑 Clear Cache
+      </button>
+      <span id="cache-result" style="font-size:.8rem;color:#94a3b8"></span>
     </div>
   </div>
 
@@ -500,6 +509,11 @@ async function loadHealth() {
     setSvc('svc-server', 'ok', d.uptime.human + ' uptime');
     setSvc('svc-node',   'ok', d.system.nodeVersion);
     setSvc('svc-env',    'ok', d.system.environment);
+    if (d.services?.redis?.connected) {
+      setSvc('svc-redis', 'ok', 'Connected');
+    } else {
+      setSvc('svc-redis', 'warn', 'Unavailable — caching disabled');
+    }
     if (d.status === 'degraded') {
       setBadge('warn', '⚠ Degraded' + (d.warnings?.length ? ': ' + d.warnings.join(', ') : ''));
     } else {
@@ -508,6 +522,32 @@ async function loadHealth() {
   } catch {
     setBadge('err', '✕ Offline');
     setSvc('svc-server', 'err', 'Unreachable');
+  }
+}
+
+async function clearCache() {
+  const btn = document.getElementById('btn-clear-cache');
+  const result = document.getElementById('cache-result');
+  btn.disabled = true;
+  btn.textContent = '⏳ Clearing…';
+  result.textContent = '';
+  try {
+    const r = await fetch(`${API}/api/health/cache/clear`, { method: 'POST' });
+    const j = await r.json();
+    if (j.success) {
+      result.style.color = '#86efac';
+      result.textContent = `✓ ${j.keysDeleted} key(s) deleted`;
+    } else {
+      result.style.color = '#fca5a5';
+      result.textContent = '✕ ' + (j.error || 'Failed');
+    }
+  } catch {
+    result.style.color = '#fca5a5';
+    result.textContent = '✕ Server unreachable';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🗑 Clear Cache';
+    setTimeout(() => { result.textContent = ''; }, 4000);
   }
 }
 

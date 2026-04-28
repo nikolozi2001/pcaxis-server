@@ -5,6 +5,9 @@
 import { DATASETS } from '../config/datasets.js';
 import pxwebService from '../services/pxwebService.js';
 import dataProcessingService from '../services/dataProcessingService.js';
+import redisService from '../services/redisService.js';
+
+const CACHE_TTL = 3600; // 1 hour
 
 export class DatasetController {
   /**
@@ -85,24 +88,33 @@ export class DatasetController {
         });
       }
 
+      const cacheKey = `metadata:${id}:${lang}`;
+      const cached = await redisService.get(cacheKey);
+      if (cached) {
+        return res.json(JSON.parse(cached));
+      }
+
       // Add random delay to spread out concurrent requests
       const delay = Math.random() * 1500; // 0-1500ms random delay
       await new Promise(resolve => setTimeout(resolve, delay));
 
       const dataset = DATASETS[id];
-      
+
       // Fetch metadata in the requested language
       const { metadata } = await pxwebService.fetchData(dataset.path, lang);
       const processedMetadata = dataProcessingService.processMetadata(metadata, id, lang);
 
-      res.json({
+      const result = {
         success: true,
         data: {
           ...dataset,
           metadata: processedMetadata,
           language: lang
         }
-      });
+      };
+
+      await redisService.setex(cacheKey, CACHE_TTL, JSON.stringify(result));
+      res.json(result);
     } catch (error) {
       console.error(`[${new Date().toISOString()}] getMetadata error for '${req.params.id}':`, error.message);
       res.status(500).json({
@@ -136,22 +148,31 @@ export class DatasetController {
         });
       }
 
+      const cacheKey = `data:${id}:${lang}`;
+      const cached = await redisService.get(cacheKey);
+      if (cached) {
+        return res.json(JSON.parse(cached));
+      }
+
       // Add random delay to spread out concurrent requests
       const delay = Math.random() * 2000; // 0-2000ms random delay
       await new Promise(resolve => setTimeout(resolve, delay));
 
       const dataset = DATASETS[id];
       const { dataset: jsonStatDataset } = await pxwebService.fetchData(dataset.path, lang);
-      const processedData = dataProcessingService.processForChart(jsonStatDataset, id, lang); // Pass dataset ID and language
+      const processedData = dataProcessingService.processForChart(jsonStatDataset, id, lang);
 
-      res.json({
+      const result = {
         success: true,
         data: {
           ...dataset,
           ...processedData,
           language: lang
         }
-      });
+      };
+
+      await redisService.setex(cacheKey, CACHE_TTL, JSON.stringify(result));
+      res.json(result);
     } catch (error) {
       console.error(`[${new Date().toISOString()}] getData error for '${req.params.id}':`, error.message);
       res.status(500).json({

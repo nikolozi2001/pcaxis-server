@@ -4,6 +4,10 @@
  */
 import { createApp } from './src/app.js';
 import { config } from './src/config/index.js';
+import redisService from './src/services/redisService.js';
+
+// Connect to Redis (non-blocking — server starts even if Redis is unavailable)
+redisService.connect();
 
 // Create Express application
 const app = createApp();
