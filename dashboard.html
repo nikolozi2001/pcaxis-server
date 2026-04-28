@@ -382,6 +382,9 @@
       <div class="stat-card gender"><div class="val" id="s-gender">—</div><div class="lbl">Gender Statistics</div></div>
       <div class="stat-card up"><div class="val" id="s-uptime">—</div><div class="lbl">Server Uptime</div></div>
       <div class="stat-card mem"><div class="val" id="s-mem">—</div><div class="lbl">Heap Used</div></div>
+      <div class="stat-card" style="border-left-color:#6366f1"><div class="val" id="s-avg-resp">—</div><div class="lbl">Avg Response</div></div>
+      <div class="stat-card" style="border-left-color:#f59e0b"><div class="val" id="s-total-req">—</div><div class="lbl">Total Requests</div></div>
+      <div class="stat-card" style="border-left-color:#ef4444"><div class="val" id="s-slow-req">—</div><div class="lbl">Slow Requests</div></div>
     </div>
 
     <div class="charts-grid">
@@ -487,8 +490,11 @@ async function loadHealth() {
     const j = await r.json();
     if (!j.success) throw new Error();
     const d = j.data;
-    document.getElementById('s-uptime').textContent = d.uptime.human;
-    document.getElementById('s-mem').textContent    = d.memory.used;
+    document.getElementById('s-uptime').textContent    = d.uptime.human;
+    document.getElementById('s-mem').textContent       = d.memory.used;
+    document.getElementById('s-avg-resp').textContent  = d.performance.averageResponseTime;
+    document.getElementById('s-total-req').textContent = d.performance.totalRequests;
+    document.getElementById('s-slow-req').textContent  = d.performance.slowRequests;
     setSvc('svc-server', 'ok', d.uptime.human + ' uptime');
     setSvc('svc-node',   'ok', d.system.nodeVersion);
     setSvc('svc-env',    'ok', d.system.environment);

@@ -14,36 +14,33 @@ class PerformanceMonitor {
       const startTime = Date.now();
       const originalSend = res.send;
       
+      const monitor = this;
       res.send = function(data) {
         const duration = Date.now() - startTime;
         const endpoint = `${req.method} ${req.route?.path || req.path}`;
-        
-        // Log performance metrics
+
         console.log(`⚡ ${endpoint} - ${duration}ms`);
-        
-        // Track slow queries
-        if (duration > this.slowQueryThreshold) {
+
+        if (duration > monitor.slowQueryThreshold) {
           console.warn(`🐌 SLOW QUERY: ${endpoint} took ${duration}ms`);
         }
-        
-        // Store metrics for analysis
+
         const key = `${req.params?.id || 'general'}-${req.query?.lang || 'ka'}`;
-        if (!this.metrics.has(key)) {
-          this.metrics.set(key, []);
+        if (!monitor.metrics.has(key)) {
+          monitor.metrics.set(key, []);
         }
-        this.metrics.get(key).push({
+        monitor.metrics.get(key).push({
           endpoint,
           duration,
           timestamp: new Date().toISOString(),
           cached: res.getHeader('X-Cache-Hit') === 'true'
         });
-        
-        // Add performance headers
+
         res.setHeader('X-Response-Time', `${duration}ms`);
         res.setHeader('X-Performance-Optimized', 'true');
-        
+
         return originalSend.call(this, data);
-      }.bind(this);
+      };
       
       next();
     };
@@ -59,9 +56,35 @@ class PerformanceMonitor {
   getAverageResponseTime(datasetId) {
     const metrics = this.metrics.get(datasetId) || [];
     if (metrics.length === 0) return 0;
-    
-    const total = metrics.reduce((sum, metric) => sum + metric.duration, 0);
+    const total = metrics.reduce((sum, m) => sum + m.duration, 0);
     return Math.round(total / metrics.length);
+  }
+
+  getSummary() {
+    let totalDuration = 0;
+    let totalRequests = 0;
+    let slowRequests = 0;
+    const oneMinuteAgo = Date.now() - 60_000;
+    let requestsLastMinute = 0;
+
+    for (const entries of this.metrics.values()) {
+      for (const m of entries) {
+        totalDuration += m.duration;
+        totalRequests++;
+        if (m.duration > this.slowQueryThreshold) slowRequests++;
+        if (new Date(m.timestamp).getTime() > oneMinuteAgo) requestsLastMinute++;
+      }
+    }
+
+    const avg = totalRequests > 0 ? Math.round(totalDuration / totalRequests) : null;
+
+    return {
+      averageResponseTime: avg !== null ? `${avg}ms` : '—',
+      totalRequests,
+      requestsPerMinute: requestsLastMinute,
+      slowRequests,
+      trackedEndpoints: this.metrics.size
+    };
   }
 }
 

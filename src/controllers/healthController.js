@@ -2,6 +2,8 @@
  * Health Controller
  * Handles health check and system status endpoints
  */
+import performanceMonitor from '../middleware/performanceMonitor.js';
+
 export class HealthController {
   /**
    * Health check endpoint
@@ -140,19 +142,13 @@ export class HealthController {
           percentage: Math.round((process.memoryUsage().heapUsed / process.memoryUsage().heapTotal) * 100)
         },
         
-        // Performance indicators
-        performance: {
-          averageResponseTime: '1.5ms',
-          cacheHitRate: '85%',
-          requestsPerMinute: 45,
-          errorRate: '2%'
-        },
-        
+        // Performance indicators (real data from performanceMonitor)
+        performance: performanceMonitor.getSummary(),
+
         // Service dependencies
         services: {
-          dataProcessing: { status: 'healthy', cacheSize: '~150MB' },
-          pxwebApi: { status: 'healthy', avgResponseTime: '190ms' },
-          internalCache: { status: 'healthy', hitRate: '85%' }
+          dataProcessing: { status: 'healthy' },
+          pxwebApi: { status: 'healthy' },
         },
         
         // System resources
