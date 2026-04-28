@@ -71,12 +71,14 @@ router.get('/', (req, res) => {
         bilingualById: 'GET /api/lakes/bilingual/:id'
       },
       health: {
-        simple: 'GET /health',
-        detailed: 'GET /health/status'
+        simple: 'GET /api/health',
+        detailed: 'GET /api/health/status',
+        advanced: 'GET /api/health/advanced'
       }
     },
     categories: {
-      environment: 'Environmental and ecological statistics'
+      environment: 'Environmental and ecological statistics',
+      'gender-statistics': 'Gender-disaggregated statistics'
     }
   });
 });

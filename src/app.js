@@ -51,26 +51,9 @@ export function createApp() {
     res.sendFile('dashboard.html', { root: './' });
   });
   
-  // Root endpoint
+  // Root → dashboard redirect
   app.get('/', (req, res) => {
-    res.json({
-      success: true,
-      message: 'PXWeb API Server',
-      version: '1.0.0',
-      environment: config.server.env,
-      api: '/api',
-      health: '/health',
-      dashboard: '/dashboard',
-      documentation: {
-        'Performance Dashboard': 'GET /dashboard',
-        'Available datasets': 'GET /api/datasets',
-        'Dataset metadata': 'GET /api/datasets/:id/metadata',
-        'Dataset data': 'GET /api/datasets/:id/data',
-        'Raw JSON-Stat': 'GET /api/datasets/:id/jsonstat',
-        'Health check': 'GET /health',
-        'System status': 'GET /health/status'
-      }
-    });
+    res.redirect('/dashboard');
   });
 
   // Error handling

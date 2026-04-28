@@ -14,18 +14,22 @@ export class DatasetController {
    */
   async getDatasets(req, res) {
     try {
-      const { category } = req.query;
-      
+      const { category, subcategory } = req.query;
+
       let datasets = Object.values(DATASETS).map(dataset => ({
         id: dataset.id,
         name: dataset.name,
         description: dataset.description,
-        category: dataset.category
+        category: dataset.category,
+        subcategory: dataset.subcategory || null
       }));
 
-      // Filter by category if specified
       if (category) {
         datasets = datasets.filter(dataset => dataset.category === category);
+      }
+
+      if (subcategory) {
+        datasets = datasets.filter(dataset => dataset.subcategory === subcategory);
       }
 
       // Group by category

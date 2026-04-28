@@ -1,468 +1,839 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ka">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PXWeb API Performance Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            background: #f5f5f5; 
-            color: #333;
-        }
-        .header { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-            color: white; 
-            padding: 2rem;
-            text-align: center;
-        }
-        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
-        .grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
-            gap: 2rem; 
-            margin-bottom: 2rem; 
-        }
-        .card { 
-            background: white; 
-            border-radius: 8px; 
-            padding: 1.5rem; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            border-left: 4px solid #667eea;
-        }
-        .metric { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin-bottom: 1rem;
-        }
-        .metric-value { font-size: 2rem; font-weight: bold; color: #667eea; }
-        .metric-label { color: #666; }
-        .status-healthy { color: #27ae60; }
-        .status-warning { color: #f39c12; }
-        .status-error { color: #e74c3c; }
-        .refresh-btn { 
-            background: #667eea; 
-            color: white; 
-            border: none; 
-            padding: 0.5rem 1rem; 
-            border-radius: 4px; 
-            cursor: pointer;
-            margin-bottom: 1rem;
-        }
-        .refresh-btn:hover { background: #5a67d8; }
-        .chart-container { height: 300px; position: relative; }
-        .dataset-list { 
-            max-height: 400px; 
-            overflow-y: auto; 
-            border: 1px solid #ddd; 
-            border-radius: 4px;
-        }
-        .dataset-item { 
-            padding: 1rem; 
-            border-bottom: 1px solid #eee; 
-            display: flex; 
-            justify-content: space-between;
-        }
-        .dataset-item:last-child { border-bottom: none; }
-        .performance-badge { 
-            padding: 0.25rem 0.5rem; 
-            border-radius: 12px; 
-            font-size: 0.8rem; 
-            font-weight: bold;
-        }
-        .fast { background: #d4edda; color: #155724; }
-        .medium { background: #fff3cd; color: #856404; }
-        .slow { background: #f8d7da; color: #721c24; }
-        .connection-status { 
-            position: fixed; 
-            top: 10px; 
-            right: 10px; 
-            padding: 0.5rem 1rem; 
-            border-radius: 20px; 
-            font-size: 0.8rem; 
-            font-weight: bold;
-            z-index: 1000;
-        }
-        .connected { background: #d4edda; color: #155724; }
-        .disconnected { background: #f8d7da; color: #721c24; }
-        .demo-mode { background: #fff3cd; color: #856404; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PXWeb Statistics Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary:   #2563eb;
+      --env:       #059669;
+      --gender:    #7c3aed;
+      --air:       #0891b2;
+      --geo:       #d97706;
+      --bg:        #f1f5f9;
+      --card:      #ffffff;
+      --border:    #e2e8f0;
+      --text:      #0f172a;
+      --muted:     #64748b;
+      --radius:    10px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--text);
+      color: #fff;
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0,0,0,.25);
+    }
+    header h1 { font-size: 1.05rem; font-weight: 600; letter-spacing: .3px; }
+    #srv-badge {
+      display: flex; align-items: center; gap: .5rem;
+      font-size: .78rem; font-weight: 600;
+      padding: .3rem .75rem; border-radius: 20px;
+      transition: background .3s;
+    }
+    #srv-badge.ok  { background: #14532d; color: #bbf7d0; }
+    #srv-badge.err { background: #7f1d1d; color: #fecaca; }
+    #srv-badge.loading { background: #1e3a5f; color: #bae6fd; }
+
+    /* ── Tabs ── */
+    nav {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 0;
+      padding: 0 2rem;
+      overflow-x: auto;
+    }
+    .tab {
+      padding: .75rem 1.25rem;
+      font-size: .875rem;
+      font-weight: 500;
+      color: var(--muted);
+      border: none;
+      border-bottom: 3px solid transparent;
+      background: none;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color .2s, border-color .2s;
+    }
+    .tab.active  { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab:hover   { color: var(--text); }
+
+    /* ── Main ── */
+    main { max-width: 1280px; margin: 0 auto; padding: 1.5rem 2rem; }
+
+    .pane { display: none; }
+    .pane.active { display: block; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+    }
+    .card h3 { font-size: .85rem; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin-bottom: 1rem; }
+
+    /* ── Summary row ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.2rem 1.4rem;
+      border-left: 4px solid var(--primary);
+    }
+    .stat-card .val { font-size: 2rem; font-weight: 700; line-height: 1; }
+    .stat-card .lbl { font-size: .8rem; color: var(--muted); margin-top: .3rem; }
+    .stat-card.env    { border-left-color: var(--env); }
+    .stat-card.gender { border-left-color: var(--gender); }
+    .stat-card.up     { border-left-color: var(--air); }
+    .stat-card.mem    { border-left-color: var(--geo); }
+
+    /* ── Charts row ── */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 768px) { .charts-grid { grid-template-columns: 1fr; } }
+    .chart-wrap { height: 260px; position: relative; }
+
+    /* ── Services ── */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .svc {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+    .svc-dot { width: 10px; height: 10px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+    .svc-dot.warn { background: #f59e0b; }
+    .svc-dot.err  { background: #ef4444; }
+    .svc-name { font-weight: 600; font-size: .88rem; }
+    .svc-detail { font-size: .75rem; color: var(--muted); }
+
+    /* ── Dataset browser ── */
+    .filters {
+      display: flex;
+      gap: .75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+      align-items: center;
+    }
+    .filters select,
+    .filters input {
+      padding: .5rem .85rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: .875rem;
+      background: var(--card);
+      color: var(--text);
+      outline: none;
+    }
+    .filters select:focus,
+    .filters input:focus { border-color: var(--primary); }
+    .filters input { flex: 1; min-width: 180px; }
+    #ds-count { margin-left: auto; font-size: .8rem; color: var(--muted); }
+
+    .ds-groups { display: flex; flex-direction: column; gap: 1.5rem; }
+
+    .ds-group-title {
+      font-size: .82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--muted);
+      margin-bottom: .75rem;
+      padding-bottom: .4rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .ds-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: .75rem;
+    }
+
+    .ds-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.1rem;
+      cursor: pointer;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .ds-card:hover { border-color: var(--primary); box-shadow: 0 2px 12px rgba(37,99,235,.12); }
+    .ds-card-name { font-size: .875rem; font-weight: 600; margin-bottom: .35rem; line-height: 1.35; }
+    .ds-card-desc { font-size: .75rem; color: var(--muted); line-height: 1.4;
+                    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .ds-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: .6rem; }
+    .badge {
+      display: inline-block;
+      font-size: .68rem;
+      font-weight: 600;
+      padding: .15rem .55rem;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+    .badge.env    { background: #d1fae5; color: #065f46; }
+    .badge.gender { background: #ede9fe; color: #4c1d95; }
+    .badge.geo    { background: #fef3c7; color: #78350f; }
+    .badge.air    { background: #cffafe; color: #164e63; }
+    .preview-btn {
+      font-size: .72rem;
+      color: var(--primary);
+      font-weight: 600;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+    }
+    .preview-btn:hover { text-decoration: underline; }
+
+    /* ── Air Quality ── */
+    .city-btns { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    .city-btn {
+      padding: .45rem 1rem;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: var(--card);
+      font-size: .85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all .2s;
+    }
+    .city-btn.active { background: var(--air); color: #fff; border-color: var(--air); }
+    .city-btn:hover:not(.active) { border-color: var(--air); color: var(--air); }
+
+    .pollutant-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .poll-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.2rem;
+      text-align: center;
+    }
+    .poll-name { font-size: .78rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+    .poll-val  { font-size: 1.8rem; font-weight: 700; margin: .3rem 0; }
+    .poll-unit { font-size: .72rem; color: var(--muted); }
+    .poll-level {
+      display: inline-block;
+      margin-top: .5rem;
+      font-size: .72rem;
+      font-weight: 700;
+      padding: .2rem .6rem;
+      border-radius: 12px;
+      text-transform: uppercase;
+    }
+    .level-good      { background: #d1fae5; color: #065f46; }
+    .level-fair      { background: #fef9c3; color: #713f12; }
+    .level-moderate  { background: #ffedd5; color: #7c2d12; }
+    .level-poor      { background: #fee2e2; color: #7f1d1d; }
+    .level-very_poor { background: #4b0082; color: #fff; }
+    .level-unknown   { background: #f1f5f9; color: var(--muted); }
+
+    #aq-updated { font-size: .78rem; color: var(--muted); margin-bottom: 1rem; }
+
+    /* ── Modal ── */
+    .modal-bg {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal-bg.open { display: flex; }
+    .modal {
+      background: var(--card);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 1.5rem;
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 1rem; right: 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: .3rem .7rem;
+      cursor: pointer;
+      font-size: .85rem;
+      font-weight: 600;
+    }
+    .modal-title  { font-size: 1rem; font-weight: 700; margin-bottom: .3rem; padding-right: 2.5rem; }
+    .modal-desc   { font-size: .8rem; color: var(--muted); margin-bottom: 1rem; }
+    .modal-chart  { height: 300px; position: relative; margin-bottom: 1rem; }
+    .modal-table  { font-size: .78rem; overflow-x: auto; }
+    .modal-table table { width: 100%; border-collapse: collapse; }
+    .modal-table th, .modal-table td { padding: .4rem .7rem; border: 1px solid var(--border); text-align: right; }
+    .modal-table th { background: var(--bg); font-weight: 600; }
+    .modal-table td:first-child, .modal-table th:first-child { text-align: left; }
+    .modal-loading { text-align: center; padding: 3rem; color: var(--muted); font-size: .9rem; }
+
+    /* ── Misc ── */
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    .refresh-bar {
+      display: flex;
+      gap: .5rem;
+      margin-bottom: 1.25rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: .45rem 1rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--card);
+      font-size: .82rem;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text);
+      transition: background .15s, border-color .15s;
+    }
+    .btn:hover { background: var(--bg); border-color: var(--primary); }
+    .btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn.primary:hover { background: #1d4ed8; }
+    #last-refresh { font-size: .75rem; color: var(--muted); margin-left: auto; }
+
+    .spinner { display: inline-block; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
-    <div class="connection-status" id="connection-indicator">🔄 Connecting...</div>
-    
-    <div class="header">
-        <h1>🚀 PXWeb API Performance Dashboard</h1>
-        <p>Real-time monitoring of your optimized data processing service</p>
-    </div>
-    
-    <div class="container">
-        <div style="margin-bottom: 1rem;">
-            <button class="refresh-btn" onclick="refreshDashboard()">🔄 Refresh Data</button>
-            <button class="refresh-btn" onclick="testConnection()" style="margin-left: 0.5rem;">
-                🔗 Test API Connection
-            </button>
-            <button class="refresh-btn" onclick="startServer()" style="margin-left: 0.5rem; background: #27ae60;">
-                ▶️ How to Start Server
-            </button>
-        </div>
-        
-        <div class="grid">
-            <!-- System Health -->
-            <div class="card">
-                <h3>🏥 System Health</h3>
-                <div class="metric">
-                    <span class="metric-label">Status:</span>
-                    <span class="metric-value status-healthy" id="system-status">Healthy</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Uptime:</span>
-                    <span class="metric-value" id="system-uptime">2h 45m</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Memory:</span>
-                    <span class="metric-value" id="system-memory">64MB (45%)</span>
-                </div>
-            </div>
 
-            <!-- Performance Metrics -->
-            <div class="card">
-                <h3>⚡ Performance</h3>
-                <div class="metric">
-                    <span class="metric-label">Avg Response:</span>
-                    <span class="metric-value" id="avg-response">1.2ms</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Cache Hit Rate:</span>
-                    <span class="metric-value" id="cache-hit-rate">87%</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Requests/min:</span>
-                    <span class="metric-value" id="requests-per-min">45</span>
-                </div>
-            </div>
+<!-- Header -->
+<header>
+  <h1>📊 PXWeb Statistics Dashboard</h1>
+  <div id="srv-badge" class="loading">⏳ Connecting…</div>
+</header>
 
-            <!-- Error Tracking -->
-            <div class="card">
-                <h3>🛡️ Error Tracking</h3>
-                <div class="metric">
-                    <span class="metric-label">Error Rate:</span>
-                    <span class="metric-value" id="error-rate">0.2%</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Last 24h Errors:</span>
-                    <span class="metric-value" id="total-errors">3</span>
-                </div>
-                <div class="metric">
-                    <span class="metric-label">Retry Success:</span>
-                    <span class="metric-value" id="retry-success">98%</span>
-                </div>
-            </div>
-        </div>
+<!-- Tab nav -->
+<nav>
+  <button class="tab active" onclick="switchTab('overview')">Overview</button>
+  <button class="tab" onclick="switchTab('datasets')">Datasets</button>
+  <button class="tab" onclick="switchTab('airquality')">Air Quality</button>
+</nav>
 
-        <!-- Response Time Chart -->
-        <div class="card">
-            <h3>📈 Response Time Trend</h3>
-            <div class="chart-container">
-                <canvas id="responseTimeChart"></canvas>
-            </div>
-        </div>
+<main>
 
-        <!-- Dataset Performance -->
-        <div class="card">
-            <h3>📊 Dataset Performance</h3>
-            <div class="dataset-list" id="dataset-performance">
-                <!-- Populated by JavaScript -->
-            </div>
-        </div>
+  <!-- ══ OVERVIEW ══ -->
+  <div id="pane-overview" class="pane active">
+    <div class="refresh-bar">
+      <button class="btn primary" onclick="loadOverview()">↻ Refresh</button>
+      <span id="last-refresh"></span>
     </div>
 
-    <script>
-        let responseTimeChart;
-        
-        // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeCharts();
-            refreshDashboard();
-            
-            // Auto-refresh every 30 seconds
-            setInterval(refreshDashboard, 30000);
-        });
+    <div class="summary-grid" id="summary-grid">
+      <div class="stat-card"><div class="val" id="s-total">—</div><div class="lbl">Total Datasets</div></div>
+      <div class="stat-card env"><div class="val" id="s-env">—</div><div class="lbl">Environment</div></div>
+      <div class="stat-card gender"><div class="val" id="s-gender">—</div><div class="lbl">Gender Statistics</div></div>
+      <div class="stat-card up"><div class="val" id="s-uptime">—</div><div class="lbl">Server Uptime</div></div>
+      <div class="stat-card mem"><div class="val" id="s-mem">—</div><div class="lbl">Heap Used</div></div>
+    </div>
 
-        // Initialize charts
-        function initializeCharts() {
-            const ctx = document.getElementById('responseTimeChart').getContext('2d');
-            responseTimeChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Response Time (ms)',
-                        data: [],
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Response Time (ms)'
-                            }
-                        },
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Time'
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top'
-                        }
-                    }
-                }
-            });
-        }
+    <div class="charts-grid">
+      <div class="card">
+        <h3>Category Distribution</h3>
+        <div class="chart-wrap"><canvas id="pie-chart"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Gender Statistics — Subcategories</h3>
+        <div class="chart-wrap"><canvas id="bar-chart"></canvas></div>
+      </div>
+    </div>
 
-        // Configuration for API server
-        const API_BASE_URL = getApiBaseUrl();
-        
-        function getApiBaseUrl() {
-            // Check if running on a server or locally
-            if (window.location.protocol === 'file:') {
-                // Default to localhost when opening HTML file directly
-                return 'http://localhost:3000';
-            } else {
-                // Use relative paths when served by the server
-                return '';
-            }
-        }
+    <div class="section-title">System Services</div>
+    <div class="services-grid">
+      <div class="svc"><div class="svc-dot" id="svc-server"></div><div><div class="svc-name">API Server</div><div class="svc-detail" id="svc-server-d">–</div></div></div>
+      <div class="svc"><div class="svc-dot" id="svc-pxweb"></div><div><div class="svc-name">PXWeb API</div><div class="svc-detail" id="svc-pxweb-d">geostat.ge</div></div></div>
+      <div class="svc"><div class="svc-dot" id="svc-node"></div><div><div class="svc-name">Node.js</div><div class="svc-detail" id="svc-node-d">–</div></div></div>
+      <div class="svc"><div class="svc-dot" id="svc-env"></div><div><div class="svc-name">Environment</div><div class="svc-detail" id="svc-env-d">–</div></div></div>
+    </div>
+  </div>
 
-        // Refresh dashboard data
-        async function refreshDashboard() {
-            try {
-                // Show loading state
-                document.getElementById('system-status').textContent = 'Loading...';
-                
-                // Fetch health data from the API server
-                const healthResponse = await fetch(`${API_BASE_URL}/api/health/advanced`);
-                const healthData = await healthResponse.json();
-                
-                if (healthData.success) {
-                    updateHealthMetrics(healthData.data);
-                    showConnectionStatus(true);
-                } else {
-                    throw new Error('Health check returned unsuccessful response');
-                }
-                
-                // Update charts with real data
-                updateCharts();
-                updateDatasetPerformance();
-                
-            } catch (error) {
-                console.error('Failed to refresh dashboard:', error);
-                showConnectionStatus(false, error.message);
-                // Use mock data when server is not available
-                useMockData();
-            }
-        }
+  <!-- ══ DATASETS ══ -->
+  <div id="pane-datasets" class="pane">
+    <div class="filters">
+      <select id="f-category" onchange="filterDatasets()">
+        <option value="">All categories</option>
+        <option value="environment">Environment</option>
+        <option value="gender-statistics">Gender Statistics</option>
+      </select>
+      <select id="f-subcategory" onchange="filterDatasets()">
+        <option value="">All subcategories</option>
+      </select>
+      <input id="f-search" type="text" placeholder="Search datasets…" oninput="filterDatasets()">
+      <span id="ds-count"></span>
+    </div>
+    <div id="ds-groups" class="ds-groups"></div>
+  </div>
 
-        // Show connection status
-        function showConnectionStatus(connected, errorMessage = '') {
-            const statusElement = document.getElementById('system-status');
-            const indicator = document.getElementById('connection-indicator');
-            
-            if (connected) {
-                statusElement.textContent = 'Connected';
-                statusElement.className = 'metric-value status-healthy';
-                
-                // Update connection indicator
-                indicator.textContent = '🟢 API Connected';
-                indicator.className = 'connection-status connected';
-                
-                // Remove any existing alerts
-                const existingAlert = document.querySelector('.connection-alert');
-                if (existingAlert) existingAlert.remove();
-                
-            } else {
-                statusElement.textContent = 'Demo Mode';
-                statusElement.className = 'metric-value status-warning';
-                
-                // Update connection indicator
-                indicator.textContent = '🟡 Demo Mode';
-                indicator.className = 'connection-status demo-mode';
-                
-                // Show connection error in the header
-                const header = document.querySelector('.header');
-                const existingAlert = document.querySelector('.connection-alert');
-                if (existingAlert) existingAlert.remove();
-                
-                const alert = document.createElement('div');
-                alert.className = 'connection-alert';
-                alert.style.cssText = `
-                    background: rgba(255, 255, 255, 0.1);
-                    color: white;
-                    padding: 0.5rem;
-                    margin-top: 1rem;
-                    border-radius: 4px;
-                    font-size: 0.9rem;
-                `;
-                alert.innerHTML = `
-                    ⚠️ <strong>Running in Demo Mode:</strong> Cannot connect to API server at <code>${API_BASE_URL}</code>
-                    <br><small>Start your server with <code>npm start</code> to see live data</small>
-                    <br><small>Error: ${errorMessage}</small>
-                `;
-                header.appendChild(alert);
-            }
-        }
+  <!-- ══ AIR QUALITY ══ -->
+  <div id="pane-airquality" class="pane">
+    <div class="city-btns">
+      <button class="city-btn active" onclick="loadAirQuality('tbilisi', this)">Tbilisi</button>
+      <button class="city-btn" onclick="loadAirQuality('kutaisi', this)">Kutaisi</button>
+      <button class="city-btn" onclick="loadAirQuality('batumi', this)">Batumi</button>
+      <button class="city-btn" onclick="loadAirQuality('rustavi', this)">Rustavi</button>
+    </div>
+    <div id="aq-updated"></div>
+    <div class="pollutant-grid" id="pollutant-grid"></div>
+    <div class="card" id="aq-stations-card" style="display:none">
+      <h3>Station Details</h3>
+      <div id="aq-stations"></div>
+    </div>
+  </div>
 
-        // Use mock data when server is unavailable
-        function useMockData() {
-            const mockHealthData = {
-                status: 'demo',
-                uptime: { human: '2h 45m (demo)' },
-                memory: { 
-                    used: '64MB',
-                    percentage: 45,
-                    total: '142MB',
-                    external: '28MB'
-                },
-                performance: {
-                    averageResponseTime: '1.2ms (demo)',
-                    cacheHitRate: '87% (demo)',
-                    requestsPerMinute: 45,
-                    errorRate: '0.2% (demo)'
-                }
-            };
-            
-            updateHealthMetrics(mockHealthData);
-        }
+</main>
 
-        // Update health metrics
-        function updateHealthMetrics(data) {
-            document.getElementById('system-status').textContent = data.status;
-            document.getElementById('system-uptime').textContent = data.uptime.human;
-            document.getElementById('system-memory').textContent = 
-                `${data.memory.used} (${data.memory.percentage}%)`;
-                
-            document.getElementById('avg-response').textContent = data.performance.averageResponseTime;
-            document.getElementById('cache-hit-rate').textContent = data.performance.cacheHitRate;
-            document.getElementById('requests-per-min').textContent = data.performance.requestsPerMinute;
-            document.getElementById('error-rate').textContent = data.performance.errorRate;
-        }
+<!-- Dataset Preview Modal -->
+<div class="modal-bg" id="modal-bg" onclick="closeModal(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕ Close</button>
+    <div id="modal-content"><div class="modal-loading">Loading…</div></div>
+  </div>
+</div>
 
-        // Update charts with sample data
-        function updateCharts() {
-            const now = new Date();
-            const timeLabel = now.toLocaleTimeString();
-            
-            // Simulate response time data
-            const responseTime = Math.random() * 3 + 0.5; // 0.5-3.5ms
-            
-            responseTimeChart.data.labels.push(timeLabel);
-            responseTimeChart.data.datasets[0].data.push(responseTime);
-            
-            // Keep only last 20 data points
-            if (responseTimeChart.data.labels.length > 20) {
-                responseTimeChart.data.labels.shift();
-                responseTimeChart.data.datasets[0].data.shift();
-            }
-            
-            responseTimeChart.update('none');
-        }
+<script>
+// ─── Config ───────────────────────────────────────────────
+const API = window.location.protocol === 'file:'
+  ? 'http://localhost:3000'
+  : `${window.location.protocol}//${window.location.host}`;
 
-        // Update dataset performance list
-        function updateDatasetPerformance() {
-            const datasets = [
-                { name: 'forest-fires', avgTime: 1.2, status: 'fast' },
-                { name: 'air-quality-tbilisi', avgTime: 0.8, status: 'fast' },
-                { name: 'protected-areas-mammals', avgTime: 2.1, status: 'medium' },
-                { name: 'water-abstraction', avgTime: 1.5, status: 'fast' },
-                { name: 'timber-by-cutting-purpose', avgTime: 1.8, status: 'fast' },
-                { name: 'geological-phenomena', avgTime: 3.2, status: 'medium' }
-            ];
-            
-            const container = document.getElementById('dataset-performance');
-            container.innerHTML = datasets.map(dataset => `
-                <div class="dataset-item">
-                    <span>${dataset.name}</span>
-                    <div>
-                        <span>${dataset.avgTime}ms</span>
-                        <span class="performance-badge ${dataset.status}">
-                            ${dataset.status.toUpperCase()}
-                        </span>
-                    </div>
-                </div>
-            `).join('');
-        }
+// ─── State ────────────────────────────────────────────────
+let allDatasets = [];
+let subcategoryMap = {};
+let pieChart = null, barChart = null;
 
-        // Test API connection
-        async function testConnection() {
-            const indicator = document.getElementById('connection-indicator');
-            indicator.textContent = '🔄 Testing...';
-            indicator.className = 'connection-status';
-            
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/health/advanced`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    showConnectionStatus(true);
-                    alert('✅ Connection successful! API server is running correctly.');
-                } else {
-                    throw new Error('API returned unsuccessful response');
-                }
-            } catch (error) {
-                showConnectionStatus(false, error.message);
-                alert(`❌ Connection failed: ${error.message}\n\nPlease start your API server first.`);
-            }
-        }
+// ─── Tab switching ─────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['overview','datasets','airquality'][i] === name);
+  });
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('pane-' + name).classList.add('active');
 
-        // Show server start instructions
-        function startServer() {
-            const instructions = `
-🚀 How to Start Your PXWeb API Server:
+  if (name === 'datasets') {
+    if (allDatasets.length === 0) loadDatasets();
+    else filterDatasets();
+  }
+  if (name === 'airquality') loadAirQuality('tbilisi', document.querySelector('.city-btn.active'));
+}
 
-1. Open a terminal/command prompt
-2. Navigate to your project directory:
-   cd /c/Users/nqachibaia/OneDrive/Desktop/pxweb-demo
+// ─── Overview ─────────────────────────────────────────────
+async function loadOverview() {
+  setBadge('loading', '⏳ Checking…');
+  await Promise.all([loadHealth(), loadDatasetSummary()]);
+  document.getElementById('last-refresh').textContent =
+    'Last updated: ' + new Date().toLocaleTimeString();
+}
 
-3. Start the server:
-   npm start
-   
-   (or if you don't have it running)
-   node server.js
+async function loadHealth() {
+  try {
+    const r = await fetch(`${API}/api/health/advanced`);
+    const j = await r.json();
+    if (!j.success) throw new Error();
+    const d = j.data;
+    document.getElementById('s-uptime').textContent = d.uptime.human;
+    document.getElementById('s-mem').textContent    = d.memory.used;
+    setSvc('svc-server', 'ok', d.uptime.human + ' uptime');
+    setSvc('svc-node',   'ok', d.system.nodeVersion);
+    setSvc('svc-env',    'ok', d.system.environment);
+    setBadge('ok', '● Connected');
+  } catch {
+    setBadge('err', '✕ Offline');
+    setSvc('svc-server', 'err', 'Unreachable');
+  }
+}
 
-4. The server should start on http://localhost:3000
+async function loadDatasetSummary() {
+  try {
+    const [dsRes, catRes] = await Promise.all([
+      fetch(`${API}/api/datasets`).then(r => r.json()),
+      fetch(`${API}/api/navigation/categories`).then(r => r.json())
+    ]);
 
-5. Refresh this dashboard to see live data!
+    const datasets = dsRes.data || [];
+    const envCount    = datasets.filter(d => d.category === 'environment').length;
+    const genderCount = datasets.filter(d => d.category === 'gender-statistics').length;
 
-📝 Note: Make sure you have Node.js installed and dependencies ready.
-`;
-            alert(instructions);
-        }
+    document.getElementById('s-total').textContent  = datasets.length;
+    document.getElementById('s-env').textContent    = envCount;
+    document.getElementById('s-gender').textContent = genderCount;
+    setSvc('svc-pxweb', 'ok', datasets.length + ' datasets loaded');
 
-        // Status class helper
-        function getStatusClass(status) {
-            switch(status.toLowerCase()) {
-                case 'healthy': return 'status-healthy';
-                case 'degraded': return 'status-warning';
-                case 'unhealthy': return 'status-error';
-                default: return '';
-            }
-        }
-    </script>
+    drawPie(envCount, genderCount, datasets.length - envCount - genderCount);
+
+    // Gender subcategory bar
+    const genderSubs = catRes?.data?.subcategories?.['gender-statistics'] || {};
+    const subCounts = {};
+    datasets.filter(d => d.category === 'gender-statistics').forEach(d => {
+      if (d.subcategory) subCounts[d.subcategory] = (subCounts[d.subcategory] || 0) + 1;
+    });
+    const subLabels = Object.values(genderSubs).map(s => s.georgianName || s.name);
+    const subData   = Object.keys(genderSubs).map(k => subCounts[k] || 0);
+    drawBar(subLabels, subData);
+
+    subcategoryMap = catRes?.data?.subcategories || {};
+    allDatasets = datasets;
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function drawPie(env, gender, other) {
+  const ctx = document.getElementById('pie-chart').getContext('2d');
+  if (pieChart) pieChart.destroy();
+  pieChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Environment', 'Gender Statistics', 'Other'],
+      datasets: [{ data: [env, gender, other],
+        backgroundColor: ['#d1fae5','#ede9fe','#cffafe'],
+        borderColor:     ['#059669','#7c3aed','#0891b2'],
+        borderWidth: 2 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+      cutout: '62%'
+    }
+  });
+}
+
+function drawBar(labels, data) {
+  const ctx = document.getElementById('bar-chart').getContext('2d');
+  if (barChart) barChart.destroy();
+  barChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ data, backgroundColor: '#c4b5fd', borderColor: '#7c3aed',
+                   borderWidth: 1, borderRadius: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, ticks: { stepSize: 1 } },
+        y: { ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+function setBadge(type, text) {
+  const el = document.getElementById('srv-badge');
+  el.textContent = text;
+  el.className = type;
+}
+
+function setSvc(id, status, detail) {
+  const dot = document.getElementById(id);
+  dot.className = 'svc-dot' + (status === 'err' ? ' err' : status === 'warn' ? ' warn' : '');
+  const d = document.getElementById(id + '-d');
+  if (d) d.textContent = detail;
+}
+
+// ─── Dataset Browser ──────────────────────────────────────
+async function loadDatasets() {
+  if (allDatasets.length === 0) {
+    const r = await fetch(`${API}/api/datasets`).then(r => r.json()).catch(() => ({ data: [] }));
+    allDatasets = r.data || [];
+  }
+  if (Object.keys(subcategoryMap).length === 0) {
+    const r = await fetch(`${API}/api/navigation/categories`).then(r => r.json()).catch(() => ({}));
+    subcategoryMap = r?.data?.subcategories || {};
+  }
+  filterDatasets();
+}
+
+function filterDatasets() {
+  const cat  = document.getElementById('f-category').value;
+  const sub  = document.getElementById('f-subcategory').value;
+  const srch = document.getElementById('f-search').value.toLowerCase();
+
+  // Populate subcategory dropdown based on selected category
+  const subSel = document.getElementById('f-subcategory');
+  const prevSub = subSel.value;
+  while (subSel.options.length > 1) subSel.remove(1);
+  if (cat && subcategoryMap[cat]) {
+    Object.values(subcategoryMap[cat]).forEach(s => {
+      const o = new Option(s.georgianName || s.name, s.id);
+      subSel.add(o);
+    });
+  }
+  subSel.value = prevSub;
+
+  let ds = allDatasets.filter(d => {
+    if (cat && d.category !== cat) return false;
+    if (sub && d.subcategory !== sub) return false;
+    if (srch && !d.name.toLowerCase().includes(srch) &&
+               !d.description?.toLowerCase().includes(srch) &&
+               !d.id.toLowerCase().includes(srch)) return false;
+    return true;
+  });
+
+  document.getElementById('ds-count').textContent = ds.length + ' dataset' + (ds.length !== 1 ? 's' : '');
+
+  // Group by subcategory (then category)
+  const groups = {};
+  ds.forEach(d => {
+    const key = d.subcategory || d.category || 'other';
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(d);
+  });
+
+  const container = document.getElementById('ds-groups');
+  container.innerHTML = '';
+
+  // Build label map
+  const labelFor = key => {
+    for (const catKey of Object.keys(subcategoryMap)) {
+      const sub = subcategoryMap[catKey]?.[key];
+      if (sub) return (sub.georgianName ? sub.georgianName + ' — ' : '') + sub.name;
+    }
+    return key.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  };
+
+  Object.entries(groups).forEach(([groupKey, items]) => {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `<div class="ds-group-title">${labelFor(groupKey)} <span style="font-weight:400;opacity:.6">(${items.length})</span></div>
+      <div class="ds-grid">${items.map(d => dsCard(d)).join('')}</div>`;
+    container.appendChild(wrap);
+  });
+}
+
+function dsCard(d) {
+  const badgeCls = d.category === 'environment' ? 'env' : d.category === 'gender-statistics' ? 'gender' : 'geo';
+  const catLabel = d.category === 'environment' ? 'Environment' : d.category === 'gender-statistics' ? 'Gender' : d.category;
+  return `<div class="ds-card" onclick="openPreview('${d.id}')">
+    <div class="ds-card-name">${d.name}</div>
+    <div class="ds-card-desc">${d.description || ''}</div>
+    <div class="ds-card-footer">
+      <span class="badge ${badgeCls}">${catLabel}</span>
+      <button class="preview-btn" onclick="event.stopPropagation();openPreview('${d.id}')">View data →</button>
+    </div>
+  </div>`;
+}
+
+// ─── Dataset Preview Modal ─────────────────────────────────
+let previewChart = null;
+
+async function openPreview(id) {
+  document.getElementById('modal-bg').classList.add('open');
+  document.getElementById('modal-content').innerHTML = '<div class="modal-loading"><span class="spinner">⏳</span> Loading data…</div>';
+
+  try {
+    const r = await fetch(`${API}/api/datasets/${id}/data?lang=ka`);
+    const j = await r.json();
+    if (!j.success) throw new Error(j.message);
+    renderModal(j.data);
+  } catch (e) {
+    document.getElementById('modal-content').innerHTML =
+      `<div class="modal-loading" style="color:#ef4444">⚠️ Failed to load: ${e.message}</div>`;
+  }
+}
+
+function renderModal(d) {
+  const rows = d.data || [];
+  const cats = d.categories || [];
+  const hasCategories = cats.length > 1;
+
+  // Detect year key
+  const yearKey = rows.length > 0 ? Object.keys(rows[0])[0] : 'year';
+  const labels = rows.map(r => r[yearKey]);
+
+  // Series
+  const COLORS = ['#2563eb','#7c3aed','#059669','#0891b2','#d97706','#db2777','#65a30d','#ea580c'];
+  let datasets;
+  if (hasCategories) {
+    datasets = cats.map((cat, i) => ({
+      label: cat,
+      data: rows.map(r => r[cat] ?? null),
+      borderColor: COLORS[i % COLORS.length],
+      backgroundColor: COLORS[i % COLORS.length] + '22',
+      tension: .3, fill: false, pointRadius: 3
+    }));
+  } else {
+    const valKey = Object.keys(rows[0] || {}).find(k => k !== yearKey) || 'value';
+    datasets = [{ label: d.name, data: rows.map(r => r[valKey] ?? null),
+      borderColor: '#2563eb', backgroundColor: '#2563eb22',
+      tension: .3, fill: true, pointRadius: 3 }];
+  }
+
+  // Table
+  const colKeys = hasCategories ? cats : [Object.keys(rows[0] || {}).find(k => k !== yearKey) || 'value'];
+  const tableHead = `<tr><th>${yearKey}</th>${colKeys.map(c => `<th>${c}</th>`).join('')}</tr>`;
+  const tableRows = rows.slice().reverse().map(r =>
+    `<tr><td>${r[yearKey]}</td>${colKeys.map(c => `<td>${r[c] !== null && r[c] !== undefined ? Number(r[c]).toLocaleString() : '–'}</td>`).join('')}</tr>`
+  ).join('');
+
+  document.getElementById('modal-content').innerHTML = `
+    <div class="modal-title">${d.name || d.id}</div>
+    <div class="modal-desc">${d.description || ''}</div>
+    <div class="modal-chart"><canvas id="modal-canvas"></canvas></div>
+    <div class="modal-table"><table><thead>${tableHead}</thead><tbody>${tableRows}</tbody></table></div>`;
+
+  if (previewChart) previewChart.destroy();
+  previewChart = new Chart(document.getElementById('modal-canvas').getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } },
+      scales: { y: { beginAtZero: false }, x: { ticks: { maxRotation: 45 } } }
+    }
+  });
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-bg') && !e.target.classList.contains('modal-close')) return;
+  document.getElementById('modal-bg').classList.remove('open');
+  if (previewChart) { previewChart.destroy(); previewChart = null; }
+}
+
+// ─── Air Quality ──────────────────────────────────────────
+const POLL_THRESHOLDS = {
+  'PM2.5': [[12,'good'],[25,'fair'],[35,'moderate'],[60,'poor']],
+  'PM10':  [[20,'good'],[35,'fair'],[50,'moderate'],[100,'poor']],
+  'NO2':   [[40,'good'],[70,'fair'],[150,'moderate'],[200,'poor']],
+  'O3':    [[60,'good'],[120,'fair'],[180,'moderate'],[240,'poor']],
+  'SO2':   [[20,'good'],[80,'fair'],[250,'moderate'],[350,'poor']],
+  'CO':    [[4000,'good'],[8000,'fair'],[15000,'moderate'],[30000,'poor']]
+};
+
+function pollLevel(substance, value) {
+  const thresholds = POLL_THRESHOLDS[substance];
+  if (!thresholds || value == null) return 'unknown';
+  for (const [limit, level] of thresholds) if (value <= limit) return level;
+  return 'very_poor';
+}
+
+async function loadAirQuality(city, btn) {
+  if (btn) {
+    document.querySelectorAll('.city-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  document.getElementById('pollutant-grid').innerHTML =
+    '<div style="color:var(--muted);font-size:.85rem;grid-column:1/-1;padding:1rem 0">Loading…</div>';
+  document.getElementById('aq-stations-card').style.display = 'none';
+
+  try {
+    const r = await fetch(`${API}/api/air-quality/${city}/all-pollutants-average`);
+    const j = await r.json();
+    if (!j.success) throw new Error(j.message || 'Error');
+    renderAirQuality(j.data);
+  } catch (e) {
+    document.getElementById('pollutant-grid').innerHTML =
+      `<div style="color:#ef4444;grid-column:1/-1;padding:1rem 0">⚠️ ${e.message}</div>`;
+  }
+}
+
+function renderAirQuality(data) {
+  const pollutants = data.pollutants || {};
+  const ts = data.timestamp ? new Date(data.timestamp).toLocaleString('ka') : '';
+  document.getElementById('aq-updated').textContent = ts ? 'განახლდა: ' + ts : '';
+
+  const grid = document.getElementById('pollutant-grid');
+  grid.innerHTML = Object.entries(pollutants).map(([name, info]) => {
+    const val   = info.average?.value;
+    const unit  = info.average?.unit || 'μg/m³';
+    const level = info.average?.qualityLevel || pollLevel(name, val);
+    return `<div class="poll-card">
+      <div class="poll-name">${name}</div>
+      <div class="poll-val">${val != null ? val.toFixed(2) : '–'}</div>
+      <div class="poll-unit">${unit}</div>
+      <span class="poll-level level-${level.replace(/\s/g,'_')}">${level}</span>
+    </div>`;
+  }).join('');
+
+  // Station table
+  const stations = data.pollutants
+    ? Object.values(data.pollutants)[0]?.stations || []
+    : [];
+  if (stations.length) {
+    const card = document.getElementById('aq-stations-card');
+    card.style.display = 'block';
+    document.getElementById('aq-stations').innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:.8rem">
+        <thead><tr style="background:var(--bg)">
+          <th style="padding:.4rem .7rem;border:1px solid var(--border);text-align:left">Station</th>
+          <th style="padding:.4rem .7rem;border:1px solid var(--border)">Address</th>
+          <th style="padding:.4rem .7rem;border:1px solid var(--border)">Value</th>
+          <th style="padding:.4rem .7rem;border:1px solid var(--border)">Quality</th>
+        </tr></thead>
+        <tbody>${stations.map(s => `<tr>
+          <td style="padding:.4rem .7rem;border:1px solid var(--border)">${s.code}</td>
+          <td style="padding:.4rem .7rem;border:1px solid var(--border)">${s.settlement || s.address || '–'}</td>
+          <td style="padding:.4rem .7rem;border:1px solid var(--border);text-align:right">${s.pollutantValue != null ? s.pollutantValue.toFixed(2) : '–'}</td>
+          <td style="padding:.4rem .7rem;border:1px solid var(--border);text-align:center">
+            <span class="poll-level level-${(s.qualityLevel||'unknown').replace(/\s/g,'_')}">${s.qualityLevel || '–'}</span>
+          </td>
+        </tr>`).join('')}</tbody>
+      </table>`;
+  }
+}
+
+// ─── Boot ─────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  loadOverview();
+  setInterval(loadOverview, 60_000);
+});
+</script>
 </body>
 </html>

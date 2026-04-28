@@ -3,7 +3,7 @@
  * Handles PXWeb API exploration and dataset discovery
  */
 import pxwebNavigationService from '../services/pxwebNavigationService.js';
-import { CATEGORIES, ENVIRONMENT_SUBCATEGORIES } from '../config/datasets.js';
+import { CATEGORIES, ENVIRONMENT_SUBCATEGORIES, GENDER_SUBCATEGORIES } from '../config/datasets.js';
 
 export class NavigationController {
   /**
@@ -41,7 +41,10 @@ export class NavigationController {
         success: true,
         data: {
           categories: CATEGORIES,
-          environmentSubcategories: ENVIRONMENT_SUBCATEGORIES
+          subcategories: {
+            environment: ENVIRONMENT_SUBCATEGORIES,
+            'gender-statistics': GENDER_SUBCATEGORIES
+          }
         }
       });
     } catch (error) {
