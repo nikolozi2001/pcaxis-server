@@ -20,12 +20,6 @@
 
 ---
 
-## ⚠️ DEAD CODE — წაშლა/გამოყენება სჭირდება
-
-### `server.js` — ძველი პროტოტიპი
-Root-ში `server.js` - ეს 2024 წლის პირველი draft-ია, ცარიელი `DATASETS = {}` ობიექტით.
-`index.js` ახლა ყველაფერს ასრულებს. `server.js` შეიძლება წაიშალოს.
-
 ---
 
 ## 🔴 QUICK WINS — მარტივი და სასარგებლო (1-2 სთ)
@@ -181,7 +175,7 @@ Future:
   [ ] Automated tests
 
 Cleanup:
-  [ ] server.js წაშლა
+  [x] server.js წაშლა
   [ ] API_UPDATES.md, DASHBOARD_SETUP.md, EXCEL_INTEGRATION_COMPLETE.md,
       MAINTENANCE_GUIDE.md, PERFORMANCE_OPTIMIZATION_REPORT.md წაშლა
 ```
