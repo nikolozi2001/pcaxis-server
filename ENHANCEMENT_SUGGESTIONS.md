@@ -20,6 +20,7 @@
 | 12 | **`getGenderStructure` endpoint** | `GET /api/navigation/gender` — subcategory matching-ით, `getEnvironmentStructure`-ის ანალოგი |
 | 13 | **Subcategory grouping** | `groupedBySubcategory` დამატებულია `/api/datasets` response-ში |
 | 14 | **Redis Caching** | `getMetadata`/`getData` 1სთ TTL-ით; `POST /api/health/cache/clear`; dashboard-ზე Redis სტატუსი + Clear Cache ღილაკი |
+| 15 | **Docker** | `Dockerfile` + `docker-compose.yml` (app + Redis healthcheck) + `.dockerignore` |
 
 ---
 
@@ -99,16 +100,8 @@ res.set('Cache-Control', 'public, max-age=3600'); // 1 საათი
 
 ---
 
-### 10. Docker
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY . .
-EXPOSE 3000
-CMD ["npm", "start"]
-```
+### ~~10. Docker~~ ✅ DONE
+`Dockerfile` + `docker-compose.yml` (app + Redis) + `.dockerignore` დამატებულია.
 
 ---
 
@@ -146,7 +139,7 @@ Medium (3-5h):
 
 Future:
   [x] Redis caching
-  [ ] Docker
+  [x] Docker
   [ ] Automated tests
 
 Cleanup:
