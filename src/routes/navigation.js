@@ -20,4 +20,7 @@ router.get('/discover', asyncHandler(navigationController.discoverTables.bind(na
 // GET /api/navigation/environment - Get environment statistics structure
 router.get('/environment', asyncHandler(navigationController.getEnvironmentStructure.bind(navigationController)));
 
+// GET /api/navigation/gender - Get gender statistics structure
+router.get('/gender', asyncHandler(navigationController.getGenderStructure.bind(navigationController)));
+
 export default router;

@@ -32,12 +32,16 @@ export class DatasetController {
         datasets = datasets.filter(dataset => dataset.subcategory === subcategory);
       }
 
-      // Group by category
       const groupedByCategory = datasets.reduce((acc, dataset) => {
-        if (!acc[dataset.category]) {
-          acc[dataset.category] = [];
-        }
+        if (!acc[dataset.category]) acc[dataset.category] = [];
         acc[dataset.category].push(dataset);
+        return acc;
+      }, {});
+
+      const groupedBySubcategory = datasets.reduce((acc, dataset) => {
+        const key = dataset.subcategory || 'other';
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(dataset);
         return acc;
       }, {});
 
@@ -46,6 +50,7 @@ export class DatasetController {
         count: datasets.length,
         data: datasets,
         grouped: groupedByCategory,
+        groupedBySubcategory,
         categories: Object.keys(groupedByCategory)
       });
     } catch (error) {

@@ -97,6 +97,36 @@ export class NavigationController {
    * @param {Request} req 
    * @param {Response} res 
    */
+  async getGenderStructure(req, res) {
+    try {
+      const structure = await pxwebNavigationService.explorePath('Gender%20Statistics');
+
+      const enhancedItems = structure.items.map(item => {
+        const subcategoryKey = `gender-${item.id.toLowerCase().replace(/[^a-z]/g, '-')}`;
+        const subcategory = GENDER_SUBCATEGORIES[subcategoryKey] ||
+          Object.values(GENDER_SUBCATEGORIES).find(sub =>
+            sub.name.toLowerCase().includes(item.id.toLowerCase())
+          );
+
+        return {
+          ...item,
+          subcategory: subcategory || { id: subcategoryKey, name: item.text, georgianName: item.text }
+        };
+      });
+
+      res.json({
+        success: true,
+        data: { ...structure, items: enhancedItems, subcategories: GENDER_SUBCATEGORIES }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get gender structure',
+        message: error.message
+      });
+    }
+  }
+
   async getEnvironmentStructure(req, res) {
     try {
       const environmentPath = 'Environment%20Statistics';

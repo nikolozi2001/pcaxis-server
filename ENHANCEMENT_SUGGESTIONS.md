@@ -17,6 +17,8 @@
 | 9 | **`performanceMonitor.js` activated** | Registered in `app.js`; `healthController` uses `getSummary()`; dashboard shows real metrics |
 | 10 | **Input Sanitization** | `getMetadata`, `getData`, `getJsonStat` validate ID with `/[^a-z0-9\-_]/gi` before hitting PXWeb |
 | 11 | **compression middleware** | gzip enabled via `compression` package; response-ები ~70% პატარა |
+| 12 | **`getGenderStructure` endpoint** | `GET /api/navigation/gender` — subcategory matching-ით, `getEnvironmentStructure`-ის ანალოგი |
+| 13 | **Subcategory grouping** | `groupedBySubcategory` დამატებულია `/api/datasets` response-ში |
 
 ---
 
@@ -79,32 +81,13 @@ res.set('Cache-Control', 'public, max-age=3600'); // 1 საათი
 
 ---
 
-### 7. `getGenderStructure` endpoint
-`navigationController.js`-ში `getEnvironmentStructure` endpoint-ის ანალოგი Gender Statistics-ისთვის:
-```javascript
-// GET /api/navigation/gender
-async getGenderStructure(req, res) {
-  const structure = await pxwebNavigationService.explorePath('Gender%20Statistics');
-  res.json({ success: true, data: { ...structure, subcategories: GENDER_SUBCATEGORIES } });
-}
-```
-Dashboard-ზე navigation-სთვის სასარგებლო.
+### ~~7. `getGenderStructure` endpoint~~ ✅ DONE
+`GET /api/navigation/gender` — `getEnvironmentStructure`-ის ანალოგი, subcategory matching-ით.
 
 ---
 
-### 8. Subcategory grouping in dataset list response
-`/api/datasets?category=gender-statistics` ახლა flat list-ს აბრუნებს.
-`grouped` ობიექტი subcategory-ის მიხედვითაც დავყოთ:
-```javascript
-const groupedBySub = datasets.reduce((acc, d) => {
-  const key = d.subcategory || 'other';
-  if (!acc[key]) acc[key] = [];
-  acc[key].push(d);
-  return acc;
-}, {});
-
-res.json({ ..., groupedBySubcategory: groupedBySub });
-```
+### ~~8. Subcategory grouping in dataset list response~~ ✅ DONE
+`groupedBySubcategory` ახლა ყველა `/api/datasets` response-შია.
 
 ---
 
@@ -166,8 +149,8 @@ Quick Wins (1-2h each):
 
 Medium (3-5h):
   [x] input sanitization
-  [ ] getGenderStructure endpoint
-  [ ] groupedBySubcategory in response
+  [x] getGenderStructure endpoint
+  [x] groupedBySubcategory in response
 
 Future:
   [ ] Redis caching
