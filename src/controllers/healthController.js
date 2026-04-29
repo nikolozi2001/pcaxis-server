@@ -163,19 +163,23 @@ export class HealthController {
       };
 
       // Health status determination
+      // Redis is optional (graceful fallback) — its absence is a warning, not a failure
       const memoryUsageHigh = healthData.memory.percentage > 90;
-      const servicesDown = Object.values(healthData.services).some(s => s.status !== 'healthy');
-      
-      if (memoryUsageHigh || servicesDown) {
-        healthData.status = 'degraded';
+      const criticalServicesDown = [healthData.services.dataProcessing, healthData.services.pxwebApi]
+        .some(s => s.status !== 'healthy');
+
+      if (memoryUsageHigh || criticalServicesDown || !redisService.isConnected()) {
+        healthData.status = memoryUsageHigh || criticalServicesDown ? 'degraded' : 'healthy';
         healthData.warnings = [];
         if (memoryUsageHigh) healthData.warnings.push('High memory usage');
-        if (servicesDown) healthData.warnings.push('Some services degraded');
+        if (criticalServicesDown) healthData.warnings.push('Some services degraded');
+        if (!redisService.isConnected()) healthData.warnings.push('Redis unavailable — caching disabled');
       }
 
-      const statusCode = healthData.status === 'healthy' ? 200 : 503;
+      // Only return 503 when truly degraded (not just Redis missing)
+      const statusCode = (memoryUsageHigh || criticalServicesDown) ? 503 : 200;
       res.status(statusCode).json({
-        success: healthData.status === 'healthy',
+        success: !memoryUsageHigh && !criticalServicesDown,
         data: healthData
       });
       

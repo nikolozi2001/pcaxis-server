@@ -38,8 +38,11 @@ export function createApp() {
     next();
   });
 
+  // Suppress favicon 404s
+  app.get('/favicon.ico', (req, res) => res.status(204).end());
+
   // Serve static dashboard
-  app.use(express.static('./', { 
+  app.use(express.static('./', {
     setHeaders: (res, path) => {
       if (path.endsWith('.html')) {
         res.set('Content-Type', 'text/html');
