@@ -133,14 +133,15 @@ export class DatasetController {
   async getData(req, res) {
     try {
       const { id } = req.params;
-      const { lang = 'ka', category, ownership, region, gender } = req.query;
+      const { lang = 'ka', category, ownership, region, gender, activity } = req.query;
 
       // Build dimension filters from query params (map friendly names → PXWeb dimension codes)
       const dimensionFilters = {};
-      if (category)  dimensionFilters['Category']       = category;
-      if (ownership) dimensionFilters['Ownership Type'] = ownership;
-      if (region)    dimensionFilters['Region']         = region;
-      if (gender)    dimensionFilters['Gender']         = gender;
+      if (category)  dimensionFilters['Category']         = category;
+      if (ownership) dimensionFilters['Ownership Type']   = ownership;
+      if (region)    dimensionFilters['Region']           = region;
+      if (gender)    dimensionFilters['Gender']           = gender;
+      if (activity)  dimensionFilters['Type of Activity'] = activity;
 
       const safeId = id?.replace(/[^a-z0-9\-_]/gi, '');
       if (!safeId || safeId !== id) {
