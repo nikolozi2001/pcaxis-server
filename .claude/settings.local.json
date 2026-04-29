@@ -10,7 +10,9 @@
       "Bash(curl -s \"http://192.168.1.27:3000/api/datasets/gender-business-new-enterprises/data\")",
       "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const j=JSON.parse\\(d\\); j.data.data.slice\\(0,5\\).forEach\\(r=>console.log\\(JSON.stringify\\(r\\)\\)\\)\")",
       "Bash(curl -s \"http://192.168.1.27:3000/api/datasets/gender-business-new-enterprises/data\" -o response.json)",
-      "Bash(node -e \"const j=require\\('./response.json'\\); j.data.data.slice\\(0,5\\).forEach\\(r=>console.log\\(JSON.stringify\\(r\\)\\)\\); console.log\\('categories:', j.data.categories\\)\")"
+      "Bash(node -e \"const j=require\\('./response.json'\\); j.data.data.slice\\(0,5\\).forEach\\(r=>console.log\\(JSON.stringify\\(r\\)\\)\\); console.log\\('categories:', j.data.categories\\)\")",
+      "Bash(curl -s -o response.json http://192.168.1.27:3000/api/health/advanced)",
+      "Bash(node -e \"const j=require\\('./response.json'\\); console.log\\('status:', j.data.status\\); console.log\\('success:', j.success\\); console.log\\('warnings:', j.data.warnings || 'none'\\); console.log\\('heap%:', j.data.memory.percentage + '%'\\);\")"
     ]
   }
 }

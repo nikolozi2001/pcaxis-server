@@ -163,20 +163,30 @@ export class HealthController {
       };
 
       // Health status determination
-      // Redis is optional (graceful fallback) — its absence is a warning, not a failure
-      const memoryUsageHigh = healthData.memory.percentage > 90;
+      // Redis is optional (graceful fallback) — its absence is a warning, not a failure.
+      // heapUsed/heapTotal is misleading when heap is small (Node hasn't grown it yet),
+      // so only flag memory when the heap is actually large (> 150 MB) AND > 90% full,
+      // or when RSS exceeds 512 MB.
+      const mem = process.memoryUsage();
+      const heapPct = mem.heapUsed / mem.heapTotal;
+      const memoryUsageHigh =
+        (heapPct > 0.90 && mem.heapTotal > 150 * 1024 * 1024) ||
+        mem.rss > 512 * 1024 * 1024;
+
       const criticalServicesDown = [healthData.services.dataProcessing, healthData.services.pxwebApi]
         .some(s => s.status !== 'healthy');
 
-      if (memoryUsageHigh || criticalServicesDown || !redisService.isConnected()) {
-        healthData.status = memoryUsageHigh || criticalServicesDown ? 'degraded' : 'healthy';
-        healthData.warnings = [];
-        if (memoryUsageHigh) healthData.warnings.push('High memory usage');
-        if (criticalServicesDown) healthData.warnings.push('Some services degraded');
-        if (!redisService.isConnected()) healthData.warnings.push('Redis unavailable — caching disabled');
+      const warnings = [];
+      if (memoryUsageHigh)          warnings.push('High memory usage');
+      if (criticalServicesDown)     warnings.push('Some services degraded');
+      if (!redisService.isConnected()) warnings.push('Redis unavailable — caching disabled');
+
+      if (warnings.length) {
+        healthData.status   = (memoryUsageHigh || criticalServicesDown) ? 'degraded' : 'healthy';
+        healthData.warnings = warnings;
       }
 
-      // Only return 503 when truly degraded (not just Redis missing)
+      // Only return 503 when truly degraded (not just Redis missing or tiny heap)
       const statusCode = (memoryUsageHigh || criticalServicesDown) ? 503 : 200;
       res.status(statusCode).json({
         success: !memoryUsageHigh && !criticalServicesDown,
