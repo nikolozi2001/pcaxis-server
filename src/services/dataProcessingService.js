@@ -325,7 +325,7 @@ export class DataProcessingService {
    * @param {string} lang - Language code ('ka' for Georgian, 'en' for English)
    * @returns {Object} - Standardized data structure for frontend consumption
    */
-  processForChart(dataset, datasetId = null, lang = 'ka', rawMetadata = null) {
+  processForChart(dataset, datasetId = null, lang = 'ka', rawMetadata = null, dimensionFilters = {}) {
     // Extract basic dataset structure information
     const dimIds = dataset.id;
     const yearDimId = this._findYearDimension(dimIds);
@@ -335,8 +335,12 @@ export class DataProcessingService {
     // Build dynamic year mapping from PXWeb metadata (values → valueTexts)
     const dynamicYearMap = this._buildYearMapFromMetadata(rawMetadata, yearDimId);
 
+    // Build lookup maps from rawMetadata for filtering and labeling
+    const dimTextToId = this._buildDimTextToIdMap(rawMetadata); // text → id (for filters)
+    const dimIdToText = this._buildDimIdToTextMap(rawMetadata); // id → text (for labels)
+
     // Delegate to routing logic
-    return this._routeToProcessor(dataset, datasetId, years, yearDimId, otherDims, lang, dynamicYearMap);
+    return this._routeToProcessor(dataset, datasetId, years, yearDimId, otherDims, lang, dynamicYearMap, dimTextToId, dimIdToText, dimensionFilters);
   }
 
   /**
@@ -365,7 +369,7 @@ export class DataProcessingService {
    * @param {string} lang - Language code
    * @returns {Object} - Processed data from appropriate processor
    */
-  _routeToProcessor(dataset, datasetId, years, yearDimId, otherDims, lang, dynamicYearMap = {}) {
+  _routeToProcessor(dataset, datasetId, years, yearDimId, otherDims, lang, dynamicYearMap = {}, dimTextToId = {}, dimIdToText = {}, dimensionFilters = {}) {
     // STEP 1: Check for dataset-specific processor
     if (datasetId && DataProcessingService.DATASET_PROCESSORS[datasetId]) {
       const processorMethod = DataProcessingService.DATASET_PROCESSORS[datasetId];
@@ -382,7 +386,7 @@ export class DataProcessingService {
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
       this._logProcessing(datasetId, 'Routing to multi-dimensional processor');
-      return this._processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId, lang, dynamicYearMap);
+      return this._processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId, lang, dynamicYearMap, dimTextToId, dimIdToText, dimensionFilters);
     }
   }
 
@@ -514,7 +518,7 @@ export class DataProcessingService {
    * @param {string} datasetId - Dataset identifier for special handling
    * @returns {Object}
    */
-  _processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId = null, lang = 'ka', dynamicYearMap = {}) {
+  _processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId = null, lang = 'ka', dynamicYearMap = {}, dimTextToId = {}, dimIdToText = {}, dimensionFilters = {}) {
     // Special handling for stationary-source-pollution dataset
     if (datasetId === 'stationary-source-pollution') {
       return this._processStationarySourcePollution(dataset, years, yearDimId, otherDims);
@@ -612,13 +616,25 @@ export class DataProcessingService {
 
     // Default processing for other datasets
     // For 3D data, we'll flatten it by creating separate series for each combination
-    const allCombinations = this._getAllDimensionCombinations(dataset, otherDims);
+    const allCombinations = this._getAllDimensionCombinations(dataset, otherDims, dimIdToText);
+
+    // Apply dimension filters: map valueText → value ID, then keep only matching combinations
+    const activeDimFilters = this._resolveFilters(dimensionFilters, dimTextToId);
+    const filteredCombinations = Object.keys(activeDimFilters).length
+      ? allCombinations.filter(combo =>
+          Object.entries(activeDimFilters).every(([dimCode, valueId]) =>
+            combo.values[dimCode] === valueId
+          )
+        )
+      : allCombinations;
+
+    const usedCombinations = filteredCombinations.length ? filteredCombinations : allCombinations;
     const data = [];
 
     years.forEach((year, yearIndex) => {
       const row = { year: this._parseYear(year, yearIndex, dynamicYearMap, datasetId) };
 
-      allCombinations.forEach(combo => {
+      usedCombinations.forEach(combo => {
         const queryObj = { [yearDimId]: year, ...combo.values };
         const cell = dataset.Data(queryObj);
         row[combo.label] = cell ? Number(cell.value) : null;
@@ -630,14 +646,15 @@ export class DataProcessingService {
     return {
       title: dataset.label || 'Dataset',
       dimensions: [yearDimId, ...otherDims],
-      categories: allCombinations.map(combo => combo.label),
+      categories: usedCombinations.map(combo => combo.label),
       data: data,
       metadata: {
         totalRecords: data.length,
         hasCategories: true,
+        filtered: Object.keys(activeDimFilters).length > 0,
         yearRange: this._getYearRange(years),
         dimensionCount: otherDims.length + 1,
-        seriesCount: allCombinations.length
+        seriesCount: usedCombinations.length
       }
     };
   }
@@ -1627,23 +1644,21 @@ export class DataProcessingService {
    * @param {Array} otherDims 
    * @returns {Array}
    */
-  _getAllDimensionCombinations(dataset, otherDims) {
+  _getAllDimensionCombinations(dataset, otherDims, dimIdToText = {}) {
     const combinations = [];
-    
-    // Get the dimension data
+
     const dimData = otherDims.map(dimId => ({
       id: dimId,
       values: dataset.Dimension(dimId).id,
-      labels: this._getCategoryLabels(dataset, dimId)
+      // prefer rawMetadata labels; fall back to Category().label
+      labels: (Object.keys(dimIdToText[dimId] || {}).length
+        ? dimIdToText[dimId]
+        : this._getCategoryLabels(dataset, dimId))
     }));
 
-    // Generate all combinations
     const generateCombos = (index, currentCombo, currentLabel) => {
       if (index === dimData.length) {
-        combinations.push({
-          values: { ...currentCombo },
-          label: currentLabel
-        });
+        combinations.push({ values: { ...currentCombo }, label: currentLabel });
         return;
       }
 
@@ -1651,11 +1666,7 @@ export class DataProcessingService {
       currentDim.values.forEach(valueId => {
         const valueLabel = currentDim.labels[valueId] || valueId;
         const newLabel = currentLabel ? `${currentLabel} - ${valueLabel}` : valueLabel;
-        
-        generateCombos(index + 1, {
-          ...currentCombo,
-          [currentDim.id]: valueId
-        }, newLabel);
+        generateCombos(index + 1, { ...currentCombo, [currentDim.id]: valueId }, newLabel);
       });
     };
 
@@ -2755,6 +2766,53 @@ export class DataProcessingService {
    */
   _isValidYear(year) {
     return !isNaN(year) && year > 1900 && year < 3000;
+  }
+
+  /**
+   * Build reverse lookup map: { "DimCode": { "valueText": "valueId" } }
+   * Used to translate human-readable filter values to PXWeb dimension IDs.
+   */
+  _buildDimTextToIdMap(rawMetadata) {
+    if (!rawMetadata?.variables) return {};
+    const map = {};
+    for (const v of rawMetadata.variables) {
+      if (!v.code || !v.values || !v.valueTexts) continue;
+      map[v.code] = {};
+      v.valueTexts.forEach((text, i) => {
+        map[v.code][text] = v.values[i];
+      });
+    }
+    return map;
+  }
+
+  /**
+   * Build forward lookup map: { "DimCode": { "valueId": "valueText" } }
+   * Used to get human-readable labels for dimension values from rawMetadata.
+   */
+  _buildDimIdToTextMap(rawMetadata) {
+    if (!rawMetadata?.variables) return {};
+    const map = {};
+    for (const v of rawMetadata.variables) {
+      if (!v.code || !v.values || !v.valueTexts) continue;
+      map[v.code] = {};
+      v.values.forEach((id, i) => {
+        map[v.code][id] = v.valueTexts[i];
+      });
+    }
+    return map;
+  }
+
+  /**
+   * Resolve dimensionFilters (valueText-based) to actual value IDs using dimTextToId map.
+   * Returns { "DimCode": "valueId" } for matched filters.
+   */
+  _resolveFilters(dimensionFilters, dimTextToId) {
+    const resolved = {};
+    for (const [dimCode, valueText] of Object.entries(dimensionFilters)) {
+      const valueId = dimTextToId?.[dimCode]?.[valueText];
+      if (valueId !== undefined) resolved[dimCode] = valueId;
+    }
+    return resolved;
   }
 
   /**

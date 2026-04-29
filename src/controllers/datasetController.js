@@ -133,7 +133,14 @@ export class DatasetController {
   async getData(req, res) {
     try {
       const { id } = req.params;
-      const { lang = 'ka' } = req.query; // Default to Georgian, allow English with ?lang=en
+      const { lang = 'ka', category, ownership, region, gender } = req.query;
+
+      // Build dimension filters from query params (map friendly names → PXWeb dimension codes)
+      const dimensionFilters = {};
+      if (category)  dimensionFilters['Category']       = category;
+      if (ownership) dimensionFilters['Ownership Type'] = ownership;
+      if (region)    dimensionFilters['Region']         = region;
+      if (gender)    dimensionFilters['Gender']         = gender;
 
       const safeId = id?.replace(/[^a-z0-9\-_]/gi, '');
       if (!safeId || safeId !== id) {
@@ -148,7 +155,11 @@ export class DatasetController {
         });
       }
 
-      const cacheKey = `data:${id}:${lang}`;
+      // Cache key includes active filters so filtered results are cached separately
+      const filterSuffix = Object.keys(dimensionFilters).length
+        ? ':' + Object.entries(dimensionFilters).map(([k, v]) => `${k}=${v}`).join('&')
+        : '';
+      const cacheKey = `data:${id}:${lang}${filterSuffix}`;
       const cached = await redisService.get(cacheKey);
       if (cached) {
         return res.json(JSON.parse(cached));
@@ -160,14 +171,15 @@ export class DatasetController {
 
       const dataset = DATASETS[id];
       const { dataset: jsonStatDataset, metadata } = await pxwebService.fetchData(dataset.path, lang);
-      const processedData = dataProcessingService.processForChart(jsonStatDataset, id, lang, metadata);
+      const processedData = dataProcessingService.processForChart(jsonStatDataset, id, lang, metadata, dimensionFilters);
 
       const result = {
         success: true,
         data: {
           ...dataset,
           ...processedData,
-          language: lang
+          language: lang,
+          filters: Object.keys(dimensionFilters).length ? dimensionFilters : undefined
         }
       };
 
