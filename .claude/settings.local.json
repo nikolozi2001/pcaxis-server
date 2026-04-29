@@ -6,7 +6,11 @@
       "Bash(curl -s \"https://pc-axis.geostat.ge/PXWeb/api/v1/ka/Database/Gender%20Statistics/Business%20Statistics/01_Number_of_Employed_in_Business_Sector_and_Average_Monthly_Remuneratio.px\")",
       "Bash(curl -s http://192.168.1.27:3000/api/datasets/gender-business-employed-regions/data)",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\([r['year'] for r in d['data']['data'][:5]]\\)\")",
-      "Bash(curl -s -X POST http://192.168.1.27:3000/api/health/cache/clear)"
+      "Bash(curl -s -X POST http://192.168.1.27:3000/api/health/cache/clear)",
+      "Bash(curl -s \"http://192.168.1.27:3000/api/datasets/gender-business-new-enterprises/data\")",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const j=JSON.parse\\(d\\); j.data.data.slice\\(0,5\\).forEach\\(r=>console.log\\(JSON.stringify\\(r\\)\\)\\)\")",
+      "Bash(curl -s \"http://192.168.1.27:3000/api/datasets/gender-business-new-enterprises/data\" -o response.json)",
+      "Bash(node -e \"const j=require\\('./response.json'\\); j.data.data.slice\\(0,5\\).forEach\\(r=>console.log\\(JSON.stringify\\(r\\)\\)\\); console.log\\('categories:', j.data.categories\\)\")"
     ]
   }
 }

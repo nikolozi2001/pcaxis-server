@@ -383,7 +383,7 @@ export class DataProcessingService {
       return this._processSingleDimension(dataset, years, yearDimId);
     } else if (otherDims.length === 1 && !this._excludeFromTwoDimMap.has(datasetId)) {
       this._logProcessing(datasetId, 'Routing to two dimension processor');
-      return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
+      return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0], dynamicYearMap, dimIdToText, datasetId);
     } else {
       this._logProcessing(datasetId, 'Routing to multi-dimensional processor');
       return this._processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId, lang, dynamicYearMap, dimTextToId, dimIdToText, dimensionFilters);
@@ -453,48 +453,28 @@ export class DataProcessingService {
    * @param {string} catDimId 
    * @returns {Object}
    */
-  _processTwoDimensions(dataset, years, yearDimId, catDimId) {
+  _processTwoDimensions(dataset, years, yearDimId, catDimId, dynamicYearMap = {}, dimIdToText = {}, datasetId = null) {
     const catIds = dataset.Dimension(catDimId).id;
-    const catLabels = this._getCategoryLabels(dataset, catDimId);
-    
-    // Get year labels using the same method as _getCategoryLabels
-    const yearLabels = this._getCategoryLabels(dataset, yearDimId);
-    
-    const rows = years.map((year, index) => {
-      // Get the actual year value from the labels
-      let actualYear = Number(year) || year;
-      
-      // Try to get the actual year from the year labels
-      if (yearLabels && yearLabels[year]) {
-        const yearLabel = yearLabels[year];
-        const parsedYear = parseInt(yearLabel);
-        if (!isNaN(parsedYear)) {
-          actualYear = parsedYear;
-        }
-      }
-      
+
+    // Category labels: prefer rawMetadata-derived map, fall back to JSON-Stat
+    const metaCatLabels = dimIdToText[catDimId] || {};
+    const jsCatLabels   = this._getCategoryLabels(dataset, catDimId);
+    const catLabels = Object.keys(metaCatLabels).length ? metaCatLabels : jsCatLabels;
+
+    const rows = years.map((year, yearIndex) => {
+      const actualYear = this._parseYear(year, yearIndex, dynamicYearMap, datasetId);
       const row = { year: actualYear };
-      
+
       catIds.forEach(catId => {
         const cell = dataset.Data({ [yearDimId]: year, [catDimId]: catId });
         const label = catLabels[catId] || catId;
         row[label] = cell ? Number(cell.value) : null;
       });
-      
+
       return row;
     });
 
-    // Calculate actual years for yearRange
-    const actualYears = years.map(year => {
-      if (yearLabels && yearLabels[year]) {
-        const yearLabel = yearLabels[year];
-        const parsedYear = parseInt(yearLabel);
-        if (!isNaN(parsedYear)) {
-          return parsedYear;
-        }
-      }
-      return Number(year) || year;
-    });
+    const actualYears = rows.map(r => r.year);
 
     return {
       title: dataset.label || 'Dataset',
