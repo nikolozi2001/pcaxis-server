@@ -159,8 +159,8 @@ export class DatasetController {
       await new Promise(resolve => setTimeout(resolve, delay));
 
       const dataset = DATASETS[id];
-      const { dataset: jsonStatDataset } = await pxwebService.fetchData(dataset.path, lang);
-      const processedData = dataProcessingService.processForChart(jsonStatDataset, id, lang);
+      const { dataset: jsonStatDataset, metadata } = await pxwebService.fetchData(dataset.path, lang);
+      const processedData = dataProcessingService.processForChart(jsonStatDataset, id, lang, metadata);
 
       const result = {
         success: true,

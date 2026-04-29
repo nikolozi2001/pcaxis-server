@@ -278,9 +278,10 @@ export class DataProcessingService {
    */
   static DATASET_YEAR_MAPPINGS = {
     'forest-fires': {
-      '0': 2017, '1': 2018, '2': 2019, '3': 2020, 
+      '0': 2017, '1': 2018, '2': 2019, '3': 2020,
       '4': 2021, '5': 2022, '6': 2023
-    }
+    },
+    // gender datasets: years resolved automatically via _buildYearMapFromMetadata
     // TEMPLATE for new dataset:
     // 'new-dataset': {
     //   '0': 2020, '1': 2021, '2': 2022
@@ -324,15 +325,18 @@ export class DataProcessingService {
    * @param {string} lang - Language code ('ka' for Georgian, 'en' for English)
    * @returns {Object} - Standardized data structure for frontend consumption
    */
-  processForChart(dataset, datasetId = null, lang = 'ka') {
+  processForChart(dataset, datasetId = null, lang = 'ka', rawMetadata = null) {
     // Extract basic dataset structure information
     const dimIds = dataset.id;
     const yearDimId = this._findYearDimension(dimIds);
     const otherDims = dimIds.filter(d => d !== yearDimId);
     const years = dataset.Dimension(yearDimId).id;
-    
+
+    // Build dynamic year mapping from PXWeb metadata (values → valueTexts)
+    const dynamicYearMap = this._buildYearMapFromMetadata(rawMetadata, yearDimId);
+
     // Delegate to routing logic
-    return this._routeToProcessor(dataset, datasetId, years, yearDimId, otherDims, lang);
+    return this._routeToProcessor(dataset, datasetId, years, yearDimId, otherDims, lang, dynamicYearMap);
   }
 
   /**
@@ -361,7 +365,7 @@ export class DataProcessingService {
    * @param {string} lang - Language code
    * @returns {Object} - Processed data from appropriate processor
    */
-  _routeToProcessor(dataset, datasetId, years, yearDimId, otherDims, lang) {
+  _routeToProcessor(dataset, datasetId, years, yearDimId, otherDims, lang, dynamicYearMap = {}) {
     // STEP 1: Check for dataset-specific processor
     if (datasetId && DataProcessingService.DATASET_PROCESSORS[datasetId]) {
       const processorMethod = DataProcessingService.DATASET_PROCESSORS[datasetId];
@@ -371,17 +375,14 @@ export class DataProcessingService {
 
     // STEP 2: Route based on dimension structure (optimized lookups)
     if (otherDims.length === 0) {
-      // Only year dimension - simple time series
       this._logProcessing(datasetId, 'Routing to single dimension processor');
       return this._processSingleDimension(dataset, years, yearDimId);
     } else if (otherDims.length === 1 && !this._excludeFromTwoDimMap.has(datasetId)) {
-      // Two dimensions and not excluded - use simple 2D processor (optimized Map lookup)
       this._logProcessing(datasetId, 'Routing to two dimension processor');
       return this._processTwoDimensions(dataset, years, yearDimId, otherDims[0]);
     } else {
-      // Multi-dimensional or excluded from 2D - use complex processor
       this._logProcessing(datasetId, 'Routing to multi-dimensional processor');
-      return this._processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId, lang);
+      return this._processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId, lang, dynamicYearMap);
     }
   }
 
@@ -513,7 +514,7 @@ export class DataProcessingService {
    * @param {string} datasetId - Dataset identifier for special handling
    * @returns {Object}
    */
-  _processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId = null, lang = 'ka') {
+  _processMultiDimensions(dataset, years, yearDimId, otherDims, datasetId = null, lang = 'ka', dynamicYearMap = {}) {
     // Special handling for stationary-source-pollution dataset
     if (datasetId === 'stationary-source-pollution') {
       return this._processStationarySourcePollution(dataset, years, yearDimId, otherDims);
@@ -614,16 +615,15 @@ export class DataProcessingService {
     const allCombinations = this._getAllDimensionCombinations(dataset, otherDims);
     const data = [];
 
-    // Create a row for each year
-    years.forEach(year => {
-      const row = { year: Number(year) || year };
-      
-      allCombinations.forEach((combo, index) => {
+    years.forEach((year, yearIndex) => {
+      const row = { year: this._parseYear(year, yearIndex, dynamicYearMap, datasetId) };
+
+      allCombinations.forEach(combo => {
         const queryObj = { [yearDimId]: year, ...combo.values };
         const cell = dataset.Data(queryObj);
         row[combo.label] = cell ? Number(cell.value) : null;
       });
-      
+
       data.push(row);
     });
 
@@ -2755,6 +2755,35 @@ export class DataProcessingService {
    */
   _isValidYear(year) {
     return !isNaN(year) && year > 1900 && year < 3000;
+  }
+
+  /**
+   * Build year mapping from raw PXWeb metadata.
+   * PXWeb returns values: ["0","1",...] and valueTexts: ["2006","2007",...]
+   * This creates { "0": 2006, "1": 2007, ... } dynamically.
+   * Falls back to empty {} if metadata unavailable or years are already numeric.
+   */
+  _buildYearMapFromMetadata(rawMetadata, yearDimId) {
+    if (!rawMetadata?.variables) return {};
+
+    // Find the time variable (matching by code or time flag)
+    const yearVar = rawMetadata.variables.find(v =>
+      v.time === true ||
+      v.code?.toLowerCase() === yearDimId?.toLowerCase() ||
+      /year|წელი|time/i.test(v.code)
+    );
+
+    if (!yearVar?.values || !yearVar?.valueTexts) return {};
+
+    const map = {};
+    yearVar.values.forEach((val, i) => {
+      const year = parseInt(yearVar.valueTexts[i]);
+      if (this._isValidYear(year)) {
+        map[val] = year;
+      }
+    });
+
+    return map;
   }
 
   /**
