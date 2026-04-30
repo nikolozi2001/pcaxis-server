@@ -38,21 +38,21 @@ export function createApp() {
     next();
   });
 
-  // Serve static dashboard
-  app.use(express.static('./', {
+  // Serve static dashboard assets from public/
+  app.use(express.static('./public', {
     setHeaders: (res, path) => {
       if (path.endsWith('.html')) {
         res.set('Content-Type', 'text/html');
       }
     }
   }));
-  
+
   // Routes
   app.use('/api', routes);
-  
+
   // Dashboard route
   app.get('/dashboard', (req, res) => {
-    res.sendFile('dashboard.html', { root: './' });
+    res.sendFile('dashboard.html', { root: './public' });
   });
   
   // Root → dashboard redirect

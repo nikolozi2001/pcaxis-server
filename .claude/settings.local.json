@@ -12,7 +12,16 @@
       "Bash(curl -s \"http://192.168.1.27:3000/api/datasets/gender-business-new-enterprises/data\" -o response.json)",
       "Bash(node -e \"const j=require\\('./response.json'\\); j.data.data.slice\\(0,5\\).forEach\\(r=>console.log\\(JSON.stringify\\(r\\)\\)\\); console.log\\('categories:', j.data.categories\\)\")",
       "Bash(curl -s -o response.json http://192.168.1.27:3000/api/health/advanced)",
-      "Bash(node -e \"const j=require\\('./response.json'\\); console.log\\('status:', j.data.status\\); console.log\\('success:', j.success\\); console.log\\('warnings:', j.data.warnings || 'none'\\); console.log\\('heap%:', j.data.memory.percentage + '%'\\);\")"
+      "Bash(node -e \"const j=require\\('./response.json'\\); console.log\\('status:', j.data.status\\); console.log\\('success:', j.success\\); console.log\\('warnings:', j.data.warnings || 'none'\\); console.log\\('heap%:', j.data.memory.percentage + '%'\\);\")",
+      "Bash(node scripts/generate-favicon.js)",
+      "Bash(rm dashboard.html favicon.ico)",
+      "Bash(favicon\")",
+      "Bash(curl -s -o nul -w \"dashboard: %{http_code}\\\\n\" http://192.168.1.27:3000/dashboard)",
+      "Bash(curl -s -o nul -w \"css:       %{http_code}\\\\n\" http://192.168.1.27:3000/css/dashboard.css)",
+      "Bash(curl -s -o nul -w \"js api:    %{http_code}\\\\n\" http://192.168.1.27:3000/js/api.js)",
+      "Bash(curl -s -o nul -w \"js main:   %{http_code}\\\\n\" http://192.168.1.27:3000/js/main.js)",
+      "Bash(curl -s -o nul -w \"favicon:   %{http_code}\\\\n\" http://192.168.1.27:3000/favicon.ico)",
+      "Bash(curl -s http://192.168.1.27:3000/dashboard)"
     ]
   }
 }

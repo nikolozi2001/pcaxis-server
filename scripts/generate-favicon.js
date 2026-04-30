@@ -120,6 +120,6 @@ function buildICO(sizes) {
 // ── Generate & save ─────────────────────────────────────────────────────────
 
 const ico  = buildICO([16, 32]);
-const dest = resolve(__dirname, '..', 'favicon.ico');
+const dest = resolve(__dirname, '..', 'public', 'favicon.ico');
 writeFileSync(dest, ico);
 console.log(`✅  favicon.ico written to ${dest}  (${ico.length} bytes, 16×16 + 32×32)`);
