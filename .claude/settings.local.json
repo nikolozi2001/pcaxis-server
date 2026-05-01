@@ -24,7 +24,11 @@
       "Bash(curl -s http://192.168.1.27:3000/dashboard)",
       "Bash(curl -s -o /dev/null -w \"%{http_code} | %{url_effective} | SSL: %{ssl_verify_result}\" \"https://pc-axis.geostat.ge/PXWeb/api/v1/ka/Database/Gender%20Statistics/Business%20Statistics/03_Newly_established_enterprises_by_sex_of_owner.px\")",
       "Bash(curl -v \"https://pc-axis.geostat.ge/PXWeb/api/v1/ka/Database/Gender%20Statistics/Business%20Statistics/03_Newly_established_enterprises_by_sex_of_owner.px\")",
-      "Bash(node -e \"fetch\\('https://pc-axis.geostat.ge/PXWeb/api/v1/ka/Database/Gender%20Statistics/Business%20Statistics/03_Newly_established_enterprises_by_sex_of_owner.px'\\).then\\(r=>console.log\\('status:',r.status\\)\\).catch\\(e=>console.error\\('ERROR:',e.message, e.cause?.code, e.cause?.message\\)\\)\")"
+      "Bash(node -e \"fetch\\('https://pc-axis.geostat.ge/PXWeb/api/v1/ka/Database/Gender%20Statistics/Business%20Statistics/03_Newly_established_enterprises_by_sex_of_owner.px'\\).then\\(r=>console.log\\('status:',r.status\\)\\).catch\\(e=>console.error\\('ERROR:',e.message, e.cause?.code, e.cause?.message\\)\\)\")",
+      "Bash(node -e \"import\\('undici'\\).then\\(m => console.log\\('undici OK, Agent:', typeof m.Agent\\)\\).catch\\(e => console.error\\('NOT FOUND:', e.message\\)\\)\")",
+      "Bash(node -e \"import\\('node:undici'\\).then\\(m => console.log\\('node:undici OK, Agent:', typeof m.Agent\\)\\).catch\\(e => console.error\\('NOT FOUND:', e.message\\)\\)\")",
+      "Bash(node -e \"import\\('undici'\\).then\\(m => console.log\\('OK, version:', m.Agent?.name\\)\\).catch\\(e => console.error\\(e.message\\)\\)\")",
+      "Bash(node -e ' *)"
     ]
   }
 }

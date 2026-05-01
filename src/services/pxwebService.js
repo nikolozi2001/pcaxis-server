@@ -3,7 +3,16 @@
  * Handles all interactions with the PXWeb API
  */
 import JSONstat from 'jsonstat-toolkit';
+import { Agent, fetch as undiciFetch } from 'undici';
 import { config } from '../config/index.js';
+
+// Dispatcher that skips TLS certificate validation —
+// equivalent to PHP's "verify_peer" => false / "verify_peer_name" => false.
+// Required because pc-axis.geostat.ge uses SSL renegotiation that Node.js
+// native fetch rejects by default.
+const insecureDispatcher = new Agent({
+  connect: { rejectUnauthorized: false }
+});
 
 export class PXWebService {
   constructor() {
@@ -132,7 +141,7 @@ export class PXWebService {
     const timeoutId   = setTimeout(() => controller.abort(), this.timeout);
 
     try {
-      const response = await fetch(url, { ...options, signal: controller.signal });
+      const response = await undiciFetch(url, { ...options, signal: controller.signal, dispatcher: insecureDispatcher });
       clearTimeout(timeoutId);
       return response;
     } catch (error) {

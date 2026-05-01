@@ -37,6 +37,7 @@
     "jsonstat-toolkit": "^2.0.0",
     "node-fetch": "^3.3.2",
     "redis": "^5.12.1",
+    "undici": "^8.1.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
