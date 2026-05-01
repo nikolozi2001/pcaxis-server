@@ -100,12 +100,16 @@ async function openPreview(id) {
   document.getElementById('modal-content').innerHTML =
     '<div class="modal-loading"><span class="spinner">⏳</span> იტვირთება…</div>';
   try {
-    const j = await fetch(`${API}/api/datasets/${id}/data?lang=ka`).then(r => r.json());
-    if (!j.success) throw new Error(j.message);
+    const resp = await fetch(`${API}/api/datasets/${id}/data?lang=ka`);
+    const j    = await resp.json();
+    if (!j.success) {
+      if (resp.status === 502) throw new Error('გარე API მიუწვდომელია (geostat.ge). სცადეთ მოგვიანებით.');
+      throw new Error(j.message);
+    }
     renderModal(j.data);
   } catch (e) {
     document.getElementById('modal-content').innerHTML =
-      `<div class="modal-loading" style="color:var(--red)">ჩატვირთვა ვერ მოხერხდა: ${e.message}</div>`;
+      `<div class="modal-loading" style="color:var(--red)">⚠ ${e.message}</div>`;
   }
 }
 

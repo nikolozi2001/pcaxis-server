@@ -120,27 +120,44 @@ export class PXWebService {
   }
 
   /**
-   * Make HTTP request with timeout
-   * @param {string} url 
-   * @param {Object} options 
+   * Make HTTP request with timeout and automatic retries.
+   * @param {string} url
+   * @param {Object} options
+   * @param {number} attempt - current attempt (0-based)
    * @returns {Promise<Response>}
    */
-  async _makeRequest(url, options = {}) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+  async _makeRequest(url, options = {}, attempt = 0) {
+    const MAX_RETRIES = 2;
+    const controller  = new AbortController();
+    const timeoutId   = setTimeout(() => controller.abort(), this.timeout);
 
     try {
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal
-      });
+      const response = await fetch(url, { ...options, signal: controller.signal });
       clearTimeout(timeoutId);
       return response;
     } catch (error) {
       clearTimeout(timeoutId);
+
       if (error.name === 'AbortError') {
-        throw new Error('Request timeout');
+        throw new Error(`External API timed out after ${this.timeout}ms — geostat.ge may be slow or unreachable`);
       }
+
+      // Network-level failure (ECONNREFUSED, ENOTFOUND, fetch failed …)
+      const isNetworkError = error.cause?.code != null ||
+                             error.message === 'fetch failed' ||
+                             error.message?.startsWith('Failed to fetch');
+
+      if (isNetworkError && attempt < MAX_RETRIES) {
+        const delay = 500 * 2 ** attempt; // 500ms, 1000ms
+        await new Promise(r => setTimeout(r, delay));
+        return this._makeRequest(url, options, attempt + 1);
+      }
+
+      if (isNetworkError) {
+        const cause = error.cause?.code ? ` (${error.cause.code})` : '';
+        throw new Error(`Cannot reach external PXWeb API${cause} — check network connectivity to geostat.ge`);
+      }
+
       throw error;
     }
   }

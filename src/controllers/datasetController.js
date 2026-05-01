@@ -117,9 +117,11 @@ export class DatasetController {
       res.json(result);
     } catch (error) {
       console.error(`[${new Date().toISOString()}] getMetadata error for '${req.params.id}':`, error.message);
-      res.status(500).json({
+      const isUpstream = error.message?.includes('Cannot reach external PXWeb API') ||
+                         error.message?.includes('timed out');
+      res.status(isUpstream ? 502 : 500).json({
         success: false,
-        error: 'Failed to fetch metadata',
+        error: isUpstream ? 'External API unavailable' : 'Failed to fetch metadata',
         message: error.message
       });
     }
@@ -188,9 +190,11 @@ export class DatasetController {
       res.json(result);
     } catch (error) {
       console.error(`[${new Date().toISOString()}] getData error for '${req.params.id}':`, error.message);
-      res.status(500).json({
+      const isUpstream = error.message?.includes('Cannot reach external PXWeb API') ||
+                         error.message?.includes('timed out');
+      res.status(isUpstream ? 502 : 500).json({
         success: false,
-        error: 'Failed to fetch dataset data',
+        error: isUpstream ? 'External API unavailable' : 'Failed to fetch dataset data',
         message: error.message
       });
     }
